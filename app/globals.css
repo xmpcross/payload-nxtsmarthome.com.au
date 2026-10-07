@@ -5,8 +5,15 @@
  * every component at every breakpoint and made the site CSS 1.5 MB. The plugin
  * emits only the classes the site uses; its JS is scanned so the classes its
  * interactive components add at runtime are kept.
+ *
+ * Light theme only. The plugin's default adds `dark --prefersdark`, which
+ * applies the dark tokens from the visitor's OS setting, not the site's own
+ * .dark class: a light-mode page on a dark-mode OS got near-white article text
+ * (:root .prose reads --color-base-content). Dark mode is handled by .dark.
  */
-@plugin "flyonui";
+@plugin "flyonui" {
+  themes: light --default;
+}
 @import 'flyonui/variants.css';
 @source "../node_modules/flyonui/dist/index.js";
 /* Not site code: drafts, reports and design-tool captures. */
