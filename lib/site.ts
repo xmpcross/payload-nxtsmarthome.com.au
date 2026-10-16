@@ -28,8 +28,8 @@ export const site = {
     /*
      * The business that operates the site, named on /about/, /contact/,
      * /privacy/ and in the footer.
-     * [VERIFY: FXN Holdings Limited, UK Co. No. 16134139 — confirm which entity
-     * to name before relying on this; change it here and every page follows.]
+     * The business name is FXN Holdings (confirmed by the owner, 17 Oct 2026).
+     * Site settings > Operator overrides this default.
      */
     operator: 'FXN Holdings',
     /** Editor, named on /about/ as the person responsible for the content. */

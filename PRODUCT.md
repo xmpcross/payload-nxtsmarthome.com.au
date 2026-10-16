@@ -56,7 +56,7 @@ Competitors: nestpath.com.au, smarthome.com.au, smartspaceinstallations.com/blog
 - Product catalogue (`public/data/products.json`, `content/products/`), with product pages and inline `ProductBox` placements via `::product:<slug>::` markers. Products without a verdict (`bestFor` or `pros`) are not linked or indexed.
 - Retailer customer reviews may appear on product pages only when clearly labelled as retailers' customers' reviews, never NXT's, and only from 20 reviews up.
 - The editorial guard (`lib/editorial-guard.mjs`) refuses to render any post containing `[VERIFY]`, TODO, TBD or placeholder text.
-- Open decision: which legal entity operates the site (FXN Holdings Limited is named; `lib/site.ts` flags it for confirmation).
+- Operator: FXN Holdings (confirmed by the owner, 17 Oct 2026).
 
 ## Brand Commitments
 
