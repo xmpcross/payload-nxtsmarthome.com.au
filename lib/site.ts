@@ -31,7 +31,7 @@ export const site = {
      * [VERIFY: FXN Holdings Limited, UK Co. No. 16134139 — confirm which entity
      * to name before relying on this; change it here and every page follows.]
      */
-    operator: 'FXN Holdings Limited',
+    operator: 'FXN Holdings',
     /** Editor, named on /about/ as the person responsible for the content. */
     editor: { name: 'Kritin Curtis', slug: 'kritin-curtis' },
   },
