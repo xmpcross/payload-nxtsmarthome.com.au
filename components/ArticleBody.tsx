@@ -92,8 +92,8 @@ export default function ArticleBody({ html, products, subId, className, midSlot 
   }
 
   // Ncmaz single-post typography (neutral prose, primary links).
-  // prose-lg is applied at all breakpoints (not just lg:) so body text is
-  // 18px everywhere; CSS in globals.css overrides heading scale and line-heights.
+  // prose-lg sets the heading and spacing scale at all breakpoints; body
+  // paragraphs and lists are held at 1rem by globals.css.
   const PROSE =
     'prose prose-lg prose-neutral max-w-none prose-headings:scroll-mt-24 prose-headings:font-semibold prose-h2:mt-0 prose-h2:mb-0 prose-h3:mt-5 prose-h3:mb-2 prose-table:text-[14px] prose-a:text-primary-600 prose-a:font-medium hover:prose-a:text-primary-700 prose-img:rounded-2xl prose-th:text-left dark:prose-invert dark:prose-a:text-primary-400';
 

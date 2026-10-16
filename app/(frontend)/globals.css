@@ -1036,16 +1036,16 @@
  */
 @layer components {
   #article-body .prose {
-    /* Body paragraphs: 18 / 30.6 (line-height 1.7) on all breakpoints. */
+    /* Body paragraphs: 16 / 27.2 (line-height 1.7) on all breakpoints. */
     p {
-      font-size: 1.125rem;
+      font-size: 1rem;
       line-height: 1.7;
       margin-bottom: 1.375rem; /* ~22px */
     }
 
     /* Lists: same measure as body text; 8px gap between items. */
     ul, ol {
-      font-size: 1.125rem;
+      font-size: 1rem;
       line-height: 1.7;
     }
     li {
@@ -1139,7 +1139,7 @@
   .contact-hero p {
     margin-top: 1.5rem;
     max-width: 68ch;
-    font-size: 1.125rem;
+    font-size: 1rem;
     line-height: 1.625;
     color: var(--color-neutral-600);
   }
@@ -1156,7 +1156,7 @@
   }
   .contact-notes p,
   .contact-notes li {
-    font-size: 0.875rem;
+    font-size: 1rem;
     line-height: 1.625;
     color: var(--color-neutral-600);
   }
@@ -1804,6 +1804,25 @@ h1, h2, h3, h4, h5, h6 {
    Unlayered, so it wins over the text-* size utilities on each page's h1. */
 h1 {
   font-size: 2.5rem;
+}
+
+/* Body copy at 1rem on every page and section, including intros and the
+   paragraphs in Payload page HTML. User request, 17 Oct 2026. Unlayered, so it
+   wins over text-lg / sm:text-lg / text-[1.125rem] and the prose-lg scale.
+   Skips paragraphs that act as titles (bold/semibold) and deliberate small
+   print (text-xs, text-sm, fixed px or sub-rem sizes). */
+body,
+p:not(
+    [class*='font-bold'],
+    [class*='font-semibold'],
+    [class*='font-extrabold'],
+    [class*='font-black'],
+    [class*='text-xs'],
+    [class*='text-sm'],
+    [class*='text-[0.'],
+    [class*='px]']
+  ) {
+  font-size: 1rem;
 }
 
 /* "Where to buy" retailer list the AI writer appends to articles

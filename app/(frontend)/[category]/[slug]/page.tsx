@@ -173,7 +173,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
               <Badge color="zinc">{typeLabels[article.type] ?? article.type}</Badge>
             </div>
             <SingleTitle title={article.title} />
-            <p className="text-[1.125rem] leading-[1.7] text-neutral-600 dark:text-neutral-400">
+            <p className="text-base leading-[1.7] text-neutral-600 dark:text-neutral-400">
               {article.description}
             </p>
             <Divider />
@@ -204,7 +204,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
                 <p className="text-sm font-semibold tracking-wide text-primary-700 uppercase dark:text-primary-400">
                   The short answer
                 </p>
-                <p className="mt-2 text-[1.125rem] leading-[1.7] text-neutral-800 dark:text-neutral-200">{article.keyTakeaway}</p>
+                <p className="mt-2 text-base leading-[1.7] text-neutral-800 dark:text-neutral-200">{article.keyTakeaway}</p>
               </div>
             )}
 
@@ -262,7 +262,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
                 >
                   {author.name}
                 </Link>
-                {author.bio && <p className="mt-1 text-[1.125rem] leading-[1.7] text-neutral-600 dark:text-neutral-400">{author.bio}</p>}
+                {author.bio && <p className="mt-1 text-base leading-[1.7] text-neutral-600 dark:text-neutral-400">{author.bio}</p>}
               </div>
             </div>
 

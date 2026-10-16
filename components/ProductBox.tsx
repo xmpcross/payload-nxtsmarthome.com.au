@@ -59,7 +59,7 @@ export default function ProductBox({ product, subId, rank }: Props) {
               {product.brand ? `${product.brand} ${product.name}` : product.name}
             </p>
             {product.bestFor && (
-              <p className="mt-0.5 text-[1.125rem] leading-[1.7] text-slate-600 dark:text-slate-300">
+              <p className="mt-0.5 text-base leading-[1.7] text-slate-600 dark:text-slate-300">
                 Best for: {product.bestFor}
               </p>
             )}

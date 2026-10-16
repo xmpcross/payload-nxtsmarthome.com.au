@@ -41,7 +41,7 @@ export default function Faq({ items }: { items: FaqItem[] }) {
                 <line x1="12" y1="5" x2="12" y2="19" className="group-open:hidden" />
               </svg>
             </summary>
-            <p className="pb-5 pr-10 text-[1.125rem] leading-[1.7] text-neutral-600 dark:text-neutral-300">{item.a}</p>
+            <p className="pb-5 pr-10 text-base leading-[1.7] text-neutral-600 dark:text-neutral-300">{item.a}</p>
           </details>
         ))}
       </div>
