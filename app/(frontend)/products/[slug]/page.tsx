@@ -12,7 +12,7 @@ import JsonLd from '@/components/JsonLd';
 import { bulletsOf } from '@/lib/bullets';
 import { AFFILIATE_ENABLED } from '@/lib/affiliate';
 import { getAllProducts, getAllTopProducts, getCuratedProduct, getProductBySlug, getShoppableTopProducts, getTopProductBySlug, isIndexableProduct } from '@/lib/products';
-import ProductEditorial from '@/components/ProductEditorial';
+import { editorialParts, ProductResearchNotes, ProductSources } from '@/components/ProductEditorial';
 import { breadcrumbJsonLd, metaDescription, pageAlternates, pageTitle, productJsonLd } from '@/lib/seo';
 import { retailerReviews } from '@/lib/review-sources';
 import { responsiveImg } from '@/lib/image';
@@ -136,6 +136,8 @@ export default async function ProductDetailPage({
   };
   // Curated editorial merged over the catalogue record (lib/products.ts).
   const editorial = curated ? (await getProductBySlug(product.slug)) : undefined;
+  // Research notes and their sources, split for the two product tabs.
+  const notes = editorial ? await editorialParts(editorial) : null;
   const retailers = product.retailers || [];
   const primaryRetailer = retailers.find((r) => r.primary) || retailers[0];
 
@@ -314,14 +316,16 @@ export default async function ProductDetailPage({
               </div>
             </div>
 
-            {/* Curated research notes (content/products/<slug>.md), when written. */}
-            {editorial ? <ProductEditorial product={editorial} /> : null}
-
             {/* Highlights sit above the Description panels */}
             <ProductHighlights product={forClient} />
 
             {/* Description / Specifications / Additional Info */}
-            <ProductAccordion product={forClient} />
+            {/* Curated research notes and their sources are tabs in here (user request, 17 Oct 2026). */}
+            <ProductAccordion
+              product={forClient}
+              researchNotes={editorial && notes?.hasNotes ? <ProductResearchNotes product={editorial} html={notes.notesHtml} /> : null}
+              sources={notes?.sourcesHtml ? <ProductSources html={notes.sourcesHtml} /> : null}
+            />
 
             {/* Reviews sit directly beneath the Additional Info panel */}
             <ProductReviews product={forClient} />

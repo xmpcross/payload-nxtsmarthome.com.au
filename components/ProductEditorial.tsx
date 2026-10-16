@@ -6,12 +6,15 @@ import rehypeStringify from 'rehype-stringify';
 import type { Product } from '@/lib/products';
 
 /**
- * "Our research notes": the curated editorial for a product
- * (content/products/<slug>.md), on the product page. Server component.
+ * The curated editorial for a product (Payload Editorial fields, originally
+ * content/products/<slug>.md), shown as two product tabs in ProductAccordion
+ * (user request, 17 Oct 2026): "Our Research Notes" and "Sources". The note's
+ * "## Sources" section is split out into the second tab. Server-rendered.
  *
- * Only curated products render it, and they are the only product pages that
- * can be indexable (lib/products.ts isIndexableProduct): this is the original
- * writing that rule counts, so it has to be on the page, not only in the file.
+ * Only curated products have it, and they are the only product pages that can
+ * be indexable (lib/products.ts isIndexableProduct): this is the original
+ * writing that rule counts. Accordion panels stay in the served HTML when
+ * closed, so it is still on the page for crawlers.
  *
  * Says plainly what it is: research, not a test (CLAUDE.md rule 5). There is
  * no rating anywhere in it.
@@ -22,17 +25,27 @@ async function markdownToHtml(md: string): Promise<string> {
   return String(file).replace(/<a href="(https?:\/\/[^"]+)">/g, '<a href="$1" target="_blank" rel="noopener noreferrer nofollow">');
 }
 
-export default async function ProductEditorial({ product }: { product: Product }) {
-  const note = (product.note ?? '').replace(/<!--[\s\S]*?-->/g, '').trim();
-  if (!note && !product.pros?.length) return null;
-  const html = note ? await markdownToHtml(note) : '';
+const PROSE =
+  'prose prose-sm max-w-none leading-relaxed text-[#55555a] dark:prose-invert dark:text-slate-300 prose-h2:mt-6 prose-h2:text-lg prose-a:break-all';
 
+/** The note split at its "## Sources" heading, each half rendered to HTML. */
+export async function editorialParts(product: Product): Promise<{ notesHtml: string; sourcesHtml: string; hasNotes: boolean }> {
+  const note = (product.note ?? '').replace(/<!--[\s\S]*?-->/g, '').trim();
+  const at = note.search(/^#{2,3}\s+Sources\b.*$/im);
+  const notes = (at === -1 ? note : note.slice(0, at)).trim();
+  const sources = at === -1 ? '' : note.slice(at).replace(/^#{2,3}\s+Sources\b.*$/im, '').trim();
+  return {
+    notesHtml: notes ? await markdownToHtml(notes) : '',
+    sourcesHtml: sources ? await markdownToHtml(sources) : '',
+    hasNotes: Boolean(notes || product.bestFor || product.pros?.length || product.cons?.length),
+  };
+}
+
+/** "Our Research Notes" tab body: disclaimer, best for, pros/cons, notes. */
+export function ProductResearchNotes({ product, html }: { product: Product; html: string }) {
   return (
-    <section className="rounded-[8px] bg-white p-5 dark:bg-slate-800 sm:p-6" aria-labelledby="research-notes">
-      <h2 id="research-notes" className="text-xl font-bold text-[#1d252c] dark:text-white">
-        Our research notes
-      </h2>
-      <p className="mt-1 text-sm text-[#55555a] dark:text-slate-400">
+    <div>
+      <p className="text-sm text-[#55555a] dark:text-slate-400">
         Research-based: compiled from the manufacturer&apos;s information and Australian retailer
         listings. NXT Smart Home has not tested this product.
       </p>
@@ -74,12 +87,12 @@ export default async function ProductEditorial({ product }: { product: Product }
         </div>
       ) : null}
 
-      {html ? (
-        <div
-          className="prose prose-sm mt-6 max-w-none leading-relaxed text-[#55555a] dark:prose-invert dark:text-slate-300 prose-h2:mt-6 prose-h2:text-lg prose-a:break-all"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-      ) : null}
-    </section>
+      {html ? <div className={`${PROSE} mt-6`} dangerouslySetInnerHTML={{ __html: html }} /> : null}
+    </div>
   );
+}
+
+/** "Sources" tab body: the note's source list. */
+export function ProductSources({ html }: { html: string }) {
+  return <div className={PROSE} dangerouslySetInnerHTML={{ __html: html }} />;
 }

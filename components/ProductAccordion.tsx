@@ -27,7 +27,7 @@ import type { TopProduct } from '@/lib/products';
  * the very thing this is avoiding.
  */
 
-type SectionKey = 'description' | 'specifications' | 'additional';
+type SectionKey = 'description' | 'research' | 'specifications' | 'additional' | 'sources';
 
 /** The two the reference puts off-canvas. The rest stay in the page. */
 const PEEK: ReadonlySet<SectionKey> = new Set(['specifications', 'additional']);
@@ -89,7 +89,17 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export default function ProductAccordion({ product }: { product: TopProduct }) {
+export default function ProductAccordion({
+  product,
+  researchNotes,
+  sources,
+}: {
+  product: TopProduct;
+  /** "Our Research Notes" tab, server-rendered (components/ProductEditorial.tsx). */
+  researchNotes?: React.ReactNode;
+  /** "Sources" tab, the note's source list (components/ProductEditorial.tsx). */
+  sources?: React.ReactNode;
+}) {
   const [open, setOpen] = useState<SectionKey | null>('description');
   const baseId = useId();
 
@@ -207,6 +217,7 @@ export default function ProductAccordion({ product }: { product: TopProduct }) {
     },
     // No Features section: its content is shown under Highlights instead
     // (user request, 24 Sep 2026).
+    ...(researchNotes ? [{ key: 'research' as const, title: 'Our Research Notes', body: researchNotes }] : []),
     {
       key: 'specifications',
       title: 'Specifications',
@@ -318,6 +329,7 @@ export default function ProductAccordion({ product }: { product: TopProduct }) {
         </>
       ),
     },
+    ...(sources ? [{ key: 'sources' as const, title: 'Sources', body: sources }] : []),
   ];
 
   return (
