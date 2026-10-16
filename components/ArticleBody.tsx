@@ -95,7 +95,7 @@ export default function ArticleBody({ html, products, subId, className, midSlot 
   // prose-lg sets the heading and spacing scale at all breakpoints; body
   // paragraphs and lists are held at 1rem by globals.css.
   const PROSE =
-    'prose prose-lg prose-neutral max-w-none prose-headings:scroll-mt-24 prose-headings:font-semibold prose-p:mt-0 prose-p:mb-[14px] prose-h2:mt-0 prose-h2:mb-0 prose-h2:text-[1.5rem] prose-h3:mt-5 prose-h3:mb-2 prose-h3:text-[18px] prose-h4:text-[18px] prose-table:text-[14px] prose-a:text-primary-600 prose-a:font-medium hover:prose-a:text-primary-700 prose-img:rounded-2xl prose-th:text-left dark:prose-invert dark:prose-a:text-primary-400';
+    'prose prose-lg prose-neutral max-w-none prose-headings:scroll-mt-24 prose-headings:font-semibold prose-p:mt-0 prose-p:mb-[14px] prose-h2:mt-0 prose-h2:mb-0 prose-h2:text-[1.5rem] prose-h3:mt-5 prose-h3:mb-2 prose-h3:text-[18px] prose-h4:text-[18px] prose-table:text-[14px] prose-a:text-primary-600 prose-a:font-medium hover:prose-a:text-primary-700 prose-img:rounded-2xl prose-img:h-[450px] prose-img:w-full prose-img:object-cover prose-th:text-left dark:prose-invert dark:prose-a:text-primary-400';
 
   return (
     <div className={className}>
