@@ -32,6 +32,8 @@ export default function FlyonCard({
           <img
             src={imageUrl}
             alt={title}
+            width={640}
+            height={360}
             className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />

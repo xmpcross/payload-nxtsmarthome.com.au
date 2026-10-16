@@ -20,7 +20,15 @@ const SectionMagazine10: FC<Props> = ({ posts, className }) => {
             .map((item, index) => (
               // Only the first small card (the LCP on mobile) and the lead card (the LCP
               // on desktop) are preloaded, so the rest do not compete for bandwidth.
-              <Card18 className="col-span-1 sm:row-span-3" key={index} post={item} priority={index === 0} />
+              <Card18
+                className="col-span-1 sm:row-span-3"
+                key={index}
+                post={item}
+                priority={index === 0}
+                // Slot widths: full width less the 16px gutters on phones, half the
+                // container from sm, a quarter of the 1366px container from xl.
+                sizes="(max-width: 639px) calc(100vw - 32px), (max-width: 1279px) 50vw, 340px"
+              />
             ))}
 
           {posts[3] && (
@@ -30,11 +38,12 @@ const SectionMagazine10: FC<Props> = ({ posts, className }) => {
               titleClass="text-xl sm:text-2xl xl:text-2xl"
               post={posts[3]}
               priority={false}
+              sizes="(max-width: 1279px) 100vw, 680px"
             />
           )}
         </div>
 
-        {posts[0] && <Card19 post={posts[0]} />}
+        {posts[0] && <Card19 post={posts[0]} sizes="(max-width: 1279px) 100vw, 680px" />}
       </div>
     </div>
   )

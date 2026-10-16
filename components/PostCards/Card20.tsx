@@ -18,7 +18,7 @@ const Card20 = ({ post, className }: { post: TPost; className?: string }) => {
             className="aspect-square w-full rounded-2xl object-cover brightness-100 transition-[filter] duration-300 group-hover:brightness-90 sm:aspect-3/2"
           />
         )}
-        <Link href={`/${handle}`} className="absolute inset-0" />
+        <Link aria-label={title} href={`/${handle}`} className="absolute inset-0" />
       </div>
       <div className="max-w-xl">
         <div className="mt-3.5 flex items-center gap-x-4 text-xs">

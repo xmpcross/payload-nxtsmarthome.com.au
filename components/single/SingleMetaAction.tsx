@@ -24,7 +24,7 @@ function ShareDropdown({ handle, title }: { handle: string; title: string }) {
       <DropdownButton
         as="button"
         aria-label="Share this article"
-        className="flex size-8.5 items-center justify-center rounded-full bg-neutral-50 transition-colors duration-300 hover:bg-neutral-100 dark:bg-white/10 dark:hover:bg-white/20"
+        className="flex size-11 items-center justify-center rounded-full bg-neutral-50 transition-colors duration-300 hover:bg-neutral-100 dark:bg-white/10 dark:hover:bg-white/20"
       >
         <HugeiconsIcon icon={Share03Icon} size={20} />
       </DropdownButton>

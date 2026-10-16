@@ -169,22 +169,40 @@ export default function CookieBanner() {
 
   if (!show) return null;
 
+  /*
+   * Mobile: a flat bottom bar, copy beside two side-by-side buttons, about 70-90px
+   * tall (audit: the stacked card took 327px, 39% of a phone screen). From sm up:
+   * the full card with the longer explanation. The consent logic above is
+   * unchanged; only the layout and the mobile wording differ.
+   */
   return (
     <div
       role="dialog"
       aria-modal="false"
       aria-labelledby="cookie-banner-heading"
-      className="fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6"
+      className="fixed inset-x-0 bottom-0 z-50 sm:p-6"
     >
-      <div className="mx-auto flex max-w-[1366px] flex-col gap-5 rounded-lg border border-slate-200 bg-white p-6 shadow-lg sm:flex-row sm:items-center sm:gap-8 sm:p-7 dark:border-card-edge dark:bg-card">
-        <div className="min-w-0">
+      <div className="mx-auto flex max-w-[1366px] flex-row items-center gap-3 border-t border-slate-200 bg-white px-4 py-3 shadow-lg sm:gap-8 sm:rounded-lg sm:border sm:p-7 dark:border-card-edge dark:bg-card">
+        <div className="min-w-0 flex-1">
           <h2
             id="cookie-banner-heading"
-            className="text-base font-bold text-slate-900 dark:text-white"
+            className="sr-only text-base font-bold text-slate-900 sm:not-sr-only dark:text-white"
           >
             Cookies on this site
           </h2>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+          {/* Short copy on phones; the full explanation from sm up. */}
+          <p className="text-xs leading-snug text-slate-600 sm:hidden dark:text-slate-300">
+            {ADS_ENABLED
+              ? 'Cookies: analytics and personalised ads wait for your answer.'
+              : 'Cookies: Google Analytics waits for your answer.'}{' '}
+            <Link
+              href="/cookies/"
+              className="font-semibold text-brand-700 underline underline-offset-2 dark:text-brand-400"
+            >
+              Cookie policy
+            </Link>
+          </p>
+          <p className="mt-2 hidden text-sm leading-relaxed text-slate-600 sm:block dark:text-slate-300">
             {ADS_ENABLED ? (
               <>
                 Google Analytics tells us which guides get read and Google AdSense shows ads.{' '}
@@ -207,18 +225,18 @@ export default function CookieBanner() {
           </p>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex shrink-0 flex-row items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={() => choose('denied')}
-            className="rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 dark:border-card-edge dark:text-slate-300 dark:hover:text-white"
+            className="min-h-11 rounded-lg border border-slate-300 px-3.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 sm:px-6 sm:py-3 dark:border-card-edge dark:text-slate-300 dark:hover:text-white"
           >
             Decline
           </button>
           <button
             type="button"
             onClick={() => choose('granted')}
-            className="rounded-lg bg-brand-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-700"
+            className="min-h-11 rounded-lg bg-brand-600 px-3.5 text-sm font-bold text-white transition hover:bg-brand-700 sm:px-6 sm:py-3"
           >
             Accept
           </button>

@@ -93,6 +93,8 @@ export default function RetailerPriceTable({
                   <img
                     src={logoUrl}
                     alt={`${retailer.name} logo`}
+                    width={96}
+                    height={40}
                     className={`h-10 w-24 rounded-lg border border-slate-200 object-contain p-2 shadow-xs ${
                       retailerLogoIsDark(retailer.name) ? 'bg-[#111]' : 'bg-white'
                     }`}

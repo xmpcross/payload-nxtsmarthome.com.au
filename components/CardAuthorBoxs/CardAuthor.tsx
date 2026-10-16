@@ -18,7 +18,7 @@ const CardAuthor: FC<Props> = ({ className, author }) => {
         <h2 className="text-sm font-medium sm:text-base sm:font-semibold">{name}</h2>
         <p className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-400">{career}</p>
       </div>
-      <Link href={`/authors/${handle}/`} className="absolute inset-0" />
+      <Link aria-label={name} href={`/authors/${handle}/`} className="absolute inset-0" />
     </div>
   )
 }

@@ -283,7 +283,9 @@ export default function AllTopicsClient({ categories, posts }: AllTopicsClientPr
                 }`}
               >
                 {cat.iconSvg ? (
-                  <img src={cat.iconSvg} alt="" className="size-4 shrink-0 object-contain" />
+                  <img src={cat.iconSvg} alt=""
+                    width={16}
+                    height={16} className="size-4 shrink-0 object-contain" />
                 ) : (
                   <span>{cat.emoji || '⚡'}</span>
                 )}
@@ -484,6 +486,8 @@ export default function AllTopicsClient({ categories, posts }: AllTopicsClientPr
                             <img
                               {...responsiveImg(post.featuredImage.src, 640, '(max-width: 700px) 100vw, 33vw')}
                               alt={post.featuredImage.alt || post.title}
+                              width={640}
+                              height={400}
                               className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                               loading="lazy"
                             />
@@ -530,8 +534,10 @@ export default function AllTopicsClient({ categories, posts }: AllTopicsClientPr
                     {post.featuredImage?.src ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        {...responsiveImg(post.featuredImage.src, 640, '(max-width: 700px) 100vw, 33vw')}
+                        {...responsiveImg(post.featuredImage.src, 96, '96px')}
                         alt={post.featuredImage.alt || post.title}
+                        width={96}
+                        height={96}
                         className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy"
                       />
@@ -582,6 +588,8 @@ export default function AllTopicsClient({ categories, posts }: AllTopicsClientPr
                       <img
                         {...responsiveImg(post.featuredImage.src, 640, '(max-width: 700px) 100vw, 33vw')}
                         alt={post.featuredImage.alt || post.title}
+                        width={640}
+                        height={400}
                         className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy"
                       />

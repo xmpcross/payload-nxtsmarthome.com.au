@@ -71,14 +71,16 @@ const PostFeaturedMedia: FC<Props> = ({ className, post, isHover = false, priori
 
   const renderImage = () => {
     return (
-      <Link href={`/${handle}`}>
+      <Link href={`/${handle}`} aria-label={title}>
         <Image
           alt={title}
           fill
           className="object-cover"
           src={featuredImage}
           sizes="(max-width: 600px) 100vw, 50vw"
-          priority={priority}
+          // Next 16: `priority` is deprecated and does not set fetchpriority.
+          preload={priority}
+          fetchPriority={priority ? 'high' : undefined}
         />
         <div className="absolute inset-0 bg-black/25 opacity-0 transition-opacity group-hover:opacity-100" />
       </Link>

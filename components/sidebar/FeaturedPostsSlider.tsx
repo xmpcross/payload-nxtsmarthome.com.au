@@ -63,6 +63,8 @@ export default function FeaturedPostsSlider({ posts }: { posts: FeaturedPost[] }
                 <img
                   {...post.image}
                   alt={post.imageAlt}
+                  width={420}
+                  height={250}
                   loading="lazy"
                   className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105"
                 />

@@ -149,8 +149,10 @@ export default function SearchClient() {
             >
               <Link href={articleHref(doc)} className="block">
                 <img
-                  {...responsiveImg(doc.cover ?? `/covers/${doc.slug}.png`, 128, '96px')}
+                  {...responsiveImg(doc.cover ?? `/covers/${doc.slug}.png`, 640, '(max-width: 640px) 100vw, 33vw')}
                   alt={doc.title}
+                  width={640}
+                  height={360}
                   loading="lazy"
                   className="aspect-video w-full object-cover"
                 />

@@ -60,7 +60,9 @@ export default function ProductCard({ product, rank }: Props) {
             <img
               {...responsiveImg(product.image || '/og-default.png', 384, '(max-width: 640px) 50vw, 16rem')}
               alt={product.brand ? `${product.brand} ${product.name}` : product.name}
-              className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
+              width={384}
+              height={384}
+              className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
             />
           </div>

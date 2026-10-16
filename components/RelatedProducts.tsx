@@ -27,8 +27,10 @@ export default function RelatedProducts({ products }: { products: TopProduct[] }
                 <img
                   {...responsiveImg(product.image || '/og-default.png', 384, '(max-width: 640px) 50vw, 16rem')}
                   alt={product.brand ? `${product.brand} ${product.name}` : product.name}
+                  width={256}
+                  height={256}
                   loading="lazy"
-                  className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                  className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
 

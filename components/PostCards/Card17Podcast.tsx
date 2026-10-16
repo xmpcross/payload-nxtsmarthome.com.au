@@ -37,7 +37,7 @@ const Card17Podcast: FC<Props> = ({ className, post }) => {
 
         <div className="flex grow flex-col">
           <h2 className="block font-medium sm:text-base/snug sm:font-semibold">
-            <Link href={`/${handle}`} className="absolute inset-0"></Link>
+            <Link aria-label={title} href={`/${handle}`} className="absolute inset-0"></Link>
             <span className="line-clamp-1">{title}</span>
           </h2>
 

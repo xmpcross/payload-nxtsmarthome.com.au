@@ -10,7 +10,7 @@ interface Props {
 const MediaAudio: FC<Props> = ({ post }) => {
   return (
     <>
-      <Link href={`/${post.handle}`} className="absolute inset-0 bg-neutral-900/30" />
+      <Link aria-label={post.title} href={`/${post.handle}`} className="absolute inset-0 bg-neutral-900/30" />
       <ButtonPlayMusicPlayer className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2" post={post} />
     </>
   )

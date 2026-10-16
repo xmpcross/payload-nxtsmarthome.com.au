@@ -34,7 +34,7 @@ export default function HomeIntro({ title }: { title: string }) {
           <Link
             key={item.href}
             href={item.href}
-            className="rounded-full border border-neutral-200 bg-white px-3 py-1 font-medium text-neutral-700 transition hover:border-primary-500 hover:text-primary-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-primary-400 dark:hover:text-primary-400"
+            className="inline-flex min-h-11 items-center rounded-full border border-neutral-200 bg-white px-4 py-1 font-medium text-neutral-700 transition hover:border-primary-500 hover:text-primary-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-primary-400 dark:hover:text-primary-400"
           >
             {item.label}
           </Link>

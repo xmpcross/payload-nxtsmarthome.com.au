@@ -41,7 +41,7 @@ export default function ProductBox({ product, subId, rank }: Props) {
           */}
           {product.image && (
             <img
-              {...responsiveImg(product.image, 384, '(max-width: 640px) 50vw, 14rem')}
+              {...responsiveImg(product.image, 96, '80px')}
               alt={product.name}
               width={96}
               height={96}

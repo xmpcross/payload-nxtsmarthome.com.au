@@ -15,6 +15,8 @@ export default function LeadArticleCard({ post, className = '' }: { post: TPost;
           <img
             {...responsiveImg(post.featuredImage.src, 1200, '(max-width: 1024px) 100vw, 50vw')}
             alt={post.featuredImage.alt || post.title}
+            width={1200}
+            height={750}
             className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105"
           />
         ) : (

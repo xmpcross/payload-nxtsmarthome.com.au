@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import LocalDate from '@/components/LocalDate'
 import type { TPost } from '@/data/posts'
 import { responsiveImg } from '@/lib/image'
 
@@ -92,8 +93,10 @@ export default function EditorsChoiceSection({ posts, heading = "Editors Choice"
                 {post.featuredImage?.src ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    {...responsiveImg(post.featuredImage.src, 640, '(max-width: 700px) 100vw, 33vw')}
+                    {...responsiveImg(post.featuredImage.src, 128, '128px')}
                     alt={post.featuredImage.alt || post.title}
+                    width={128}
+                    height={128}
                     className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     loading="lazy"
                   />
@@ -117,7 +120,7 @@ export default function EditorsChoiceSection({ posts, heading = "Editors Choice"
                 {/* Date with Calendar Icon */}
                 <div className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
                   <svg className="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                  <span>{post.date || 'OCTOBER 11, 2025'}</span>
+                  {post.date ? <LocalDate date={post.date} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /> : null}
                 </div>
               </div>
             </Link>

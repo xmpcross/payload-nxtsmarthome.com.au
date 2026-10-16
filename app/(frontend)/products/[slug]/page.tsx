@@ -13,9 +13,24 @@ import { bulletsOf } from '@/lib/bullets';
 import { AFFILIATE_ENABLED } from '@/lib/affiliate';
 import { getAllProducts, getAllTopProducts, getCuratedProduct, getProductBySlug, getShoppableTopProducts, getTopProductBySlug, isIndexableProduct } from '@/lib/products';
 import ProductEditorial from '@/components/ProductEditorial';
-import { breadcrumbJsonLd, productJsonLd } from '@/lib/seo';
+import { breadcrumbJsonLd, metaDescription, pageAlternates, pageTitle, productJsonLd } from '@/lib/seo';
 import { retailerReviews } from '@/lib/review-sources';
-import { responsiveImg } from '@/lib/image'
+import { responsiveImg } from '@/lib/image';
+import { site } from '@/lib/site';
+
+/**
+ * "Aqara Hub M100" from brand "Aqara" + name "Hub M100", without doubling the
+ * brand when the catalogue name already starts with it ("TP-Link Tapo …").
+ */
+function brandedName(product: { brand?: string | null; name: string }): string {
+  const brand = product.brand?.trim();
+  if (!brand) return product.name;
+  return product.name.toLowerCase().startsWith(brand.toLowerCase()) ? product.name : `${brand} ${product.name}`;
+}
+
+// Re-render every 5 minutes like articles, so prices refresh and the page is
+// not sent with a year-long s-maxage (audit: Cache-Control on product pages).
+export const revalidate = 300;
 
 export async function generateStaticParams() {
   const products = (await getAllTopProducts());
@@ -31,7 +46,7 @@ export async function generateMetadata({
   const product = (await getTopProductBySlug(slug));
   if (!product) return {};
 
-  const fullName = `${product.brand ? product.brand + ' ' : ''}${product.name}`;
+  const fullName = brandedName(product);
   const indexable = isIndexableProduct(product);
   /*
    * Indexable (curated) pages: bestFor plus the first sentence of the curated
@@ -46,15 +61,37 @@ export async function generateMetadata({
     .match(/^.*?[.!?](\s|$)/)?.[0]
     ?.trim();
   const bestFor = (await getCuratedProduct(product.slug))?.bestFor || product.bestFor;
-  const description = indexable
+  const description = metaDescription(indexable
     ? [bestFor ? `${fullName}: ${bestFor.replace(/\.$/, '')}.` : fullName, verdict].filter(Boolean).join(' ')
-    : `Where to buy ${fullName} in Australia. Compare prices at Australian retailers.`;
+    : `Where to buy ${fullName} in Australia. Compare prices at Australian retailers.`) ?? fullName;
 
+  const socialTitle = `${fullName} Price in Australia`;
+  const title = pageTitle(socialTitle);
+  const url = `/products/${product.slug}/`;
+  // Per-product social card: every product page used to share the site-wide
+  // og:title and og-default.png (audit SXO-3). Defining openGraph here replaces
+  // the root object, so type and image are set explicitly.
+  const image = product.image || site.ogImage;
   return {
     // "Review" dropped from the title: none of these pages is one.
-    title: `${fullName} Price in Australia`,
+    title,
     description,
-    alternates: { canonical: `/products/${product.slug}/` },
+    alternates: pageAlternates(url),
+    openGraph: {
+      type: 'website',
+      siteName: site.name,
+      locale: site.locale,
+      title: socialTitle,
+      description,
+      url,
+      images: [{ url: image, alt: fullName }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: socialTitle,
+      description,
+      images: [image],
+    },
     // Price listings stay out of the index but keep passing link equity
     // (lib/products.ts isIndexableProduct).
     ...(indexable ? {} : { robots: { index: false, follow: true } }),
@@ -125,19 +162,19 @@ export default async function ProductDetailPage({
           { name: 'Home', path: '/' },
           { name: 'Products', path: '/products/' },
           { name: product.categoryName, path: `/products/category/${product.categorySlug}/` },
-          { name: product.name, path: `/products/${product.slug}/` },
+          { name: brandedName(product), path: `/products/${product.slug}/` },
         ])}
       />
       <div className="container py-8 lg:py-12">
         {/* Breadcrumb */}
-        <nav className="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-[#55555a] dark:text-slate-400">
-          <Link href="/" className="hover:text-[#0046be] dark:hover:text-blue-400">Home</Link>
+        <nav aria-label="Breadcrumb" className="mb-2 flex flex-wrap items-center gap-x-2 text-xs font-semibold text-[#55555a] dark:text-slate-400">
+          <Link href="/" className="inline-flex min-h-11 items-center hover:text-[#0046be] dark:hover:text-blue-400">Home</Link>
           <span aria-hidden="true">/</span>
-          <Link href="/products/" className="hover:text-[#0046be] dark:hover:text-blue-400">Products</Link>
+          <Link href="/products/" className="inline-flex min-h-11 items-center hover:text-[#0046be] dark:hover:text-blue-400">Products</Link>
           <span aria-hidden="true">/</span>
           <Link
             href={`/products/category/${product.categorySlug}/`}
-            className="hover:text-[#0046be] dark:hover:text-blue-400"
+            className="inline-flex min-h-11 items-center hover:text-[#0046be] dark:hover:text-blue-400"
           >
             {product.categoryName}
           </Link>
@@ -152,25 +189,62 @@ export default async function ProductDetailPage({
               {/* Gallery. One image per product in this dataset, so the
                   reference's thumbnail rail has nothing to show and is omitted
                   rather than faked with duplicates. */}
-              <div className="flex min-w-0 items-center justify-center rounded-lg bg-white p-4 dark:bg-slate-800">
+              <div className="order-2 flex min-w-0 items-center justify-center rounded-lg bg-white p-4 lg:order-none dark:bg-slate-800">
                 <img
                   {...responsiveImg(product.image || '/og-default.png', 640, '(max-width: 768px) 100vw, 480px')}
-                  alt={product.brand ? `${product.brand} ${product.name}` : product.name}
-                  className="max-h-[380px] w-full object-contain"
+                  alt={brandedName(product)}
+                  /* Intrinsic size + a square box so the summary below does not
+                     shift when the image arrives (CLS), and a high fetch
+                     priority because this is the page's LCP element. Product
+                     shots vary in shape; object-contain letterboxes them. */
+                  width={640}
+                  height={640}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                  className="aspect-square h-auto max-h-[280px] w-full object-contain sm:max-h-[380px]"
                 />
               </div>
 
-              {/* Summary */}
-              <div className="min-w-0">
-                {product.brand ? (
-                  <div className="text-sm font-semibold text-[#0046be] dark:text-blue-400">
-                    {product.brand}
+              {/* Summary. On phones it comes before the image, so the name,
+                  price and buy button are on the first screen (audit: the H1
+                  sat at y=627px and the price near the page bottom). */}
+              <div className="order-1 min-w-0 lg:order-none">
+                {/* Brand + model in the H1: "Hub M100" alone said nothing about
+                    whose hub it is. Size comes from the global h1 rule. */}
+                <h1 className="mb-2.5 font-bold leading-tight text-[#1d252c] dark:text-white">
+                  {brandedName(product)}
+                </h1>
+
+                {/* Price and primary CTA for phones; from lg the purchase panel
+                    on the right shows them beside the gallery. */}
+                {ctaRetailer ? (
+                  <div className="mb-4 rounded-[8px] border border-[#e0e0e0] p-4 lg:hidden dark:border-slate-700">
+                    {cheapest ? (
+                      <p className="text-[1.5rem] font-bold leading-none text-[#1d252c] dark:text-white">
+                        ${cheapest.priceAud!.toLocaleString('en-AU', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                        <span className="ms-2 text-[0.8125rem] font-normal text-[#55555a] dark:text-slate-400">
+                          lowest, at {cheapest.name}
+                        </span>
+                      </p>
+                    ) : null}
+                    {AFFILIATE_ENABLED && (
+                      <p className="mt-2 text-[0.75rem] leading-relaxed text-[#55555a] dark:text-slate-400">
+                        We may earn a commission from links on this page, at no extra cost to you.
+                      </p>
+                    )}
+                    <AffiliateLink
+                      href={ctaRetailer.url}
+                      subId={`detail-cta-mobile-${product.slug}`}
+                      className="mt-3 flex min-h-11 w-full items-center justify-center rounded-sm bg-[#ffe000] px-4 py-3 text-center text-sm font-bold text-[#040c13] transition hover:bg-[#fff200]"
+                    >
+                      {cheapest ? `Buy at ${ctaRetailer.name}` : `Check price at ${ctaRetailer.name}`}
+                    </AffiliateLink>
                   </div>
                 ) : null}
-
-                <h1 className="mb-2.5 mt-1.5 text-[1.2rem] font-bold leading-tight text-[#1d252c] dark:text-white">
-                  {product.name}
-                </h1>
 
                 <div className="mb-4 flex flex-wrap gap-x-5 gap-y-2 text-[0.8125rem] text-[#55555a] dark:text-slate-400">
                   {/* No star score here: next to the product name it reads as
@@ -281,6 +355,13 @@ export default async function ProductDetailPage({
                 </p>
               )}
 
+              {/* Disclosure before the offers, not after the buy button. */}
+              {AFFILIATE_ENABLED && (
+                <p className="mt-4 text-[0.75rem] leading-relaxed text-[#55555a] dark:text-slate-400">
+                  We may earn a commission from links on this page, at no extra cost to you.
+                </p>
+              )}
+
               <div className="my-5">
                 <RetailerPriceList
                   retailers={retailers}
@@ -293,24 +374,18 @@ export default async function ProductDetailPage({
                 <AffiliateLink
                   href={ctaRetailer.url}
                   subId={`detail-cta-${product.slug}`}
-                  className="block w-full rounded-sm bg-[#ffe000] px-4 py-3.5 text-center text-sm font-bold text-[#040c13] transition hover:bg-[#fff200]"
+                  className="flex min-h-11 w-full items-center justify-center rounded-sm bg-[#ffe000] px-4 py-3.5 text-center text-sm font-bold text-[#040c13] transition hover:bg-[#fff200]"
                 >
                   {cheapest ? `Buy at ${ctaRetailer.name}` : `Check price at ${ctaRetailer.name}`}
                 </AffiliateLink>
               ) : null}
-
-              {AFFILIATE_ENABLED && (
-                <p className="mt-3 text-center text-[0.6875rem] leading-relaxed text-[#55555a] dark:text-slate-400">
-                  We may earn a commission from links on this page, at no extra cost to you.
-                </p>
-              )}
             </div>
           </aside>
         </div>
 
         {/* Retailer Price Comparison Table */}
         <RetailerPriceTable
-          productName={product.name}
+          productName={brandedName(product)}
           retailers={product.retailers}
           subId={`detail-table-${product.slug}`}
           pricesCheckedAt={product.pricesCheckedAt}

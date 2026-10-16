@@ -211,6 +211,8 @@ export function HomeTopicSection({
               <img
                 {...responsiveImg(lead.featuredImage.src, 1200, '(max-width: 1024px) 100vw, 50vw')}
                 alt={lead.featuredImage.alt || lead.title}
+                width={1200}
+                height={750}
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 loading="lazy"
               />
@@ -252,8 +254,10 @@ export function HomeTopicSection({
                     {post.featuredImage?.src ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        {...responsiveImg(post.featuredImage.src, 640, '(max-width: 700px) 100vw, 33vw')}
+                        {...responsiveImg(post.featuredImage.src, 96, '96px')}
                         alt={post.featuredImage.alt || post.title}
+                        width={96}
+                        height={96}
                         className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy"
                       />
@@ -395,8 +399,10 @@ export function HomeSetupGuides({
                 {post.featuredImage?.src ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    {...responsiveImg(post.featuredImage.src, 640, '(max-width: 700px) 100vw, 33vw')}
+                    {...responsiveImg(post.featuredImage.src, 96, '96px')}
                     alt={post.featuredImage.alt || post.title}
+                    width={96}
+                    height={96}
                     className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     loading="lazy"
                   />

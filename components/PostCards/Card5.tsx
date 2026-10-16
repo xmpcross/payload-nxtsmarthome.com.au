@@ -19,7 +19,7 @@ const Card5: FC<Props> = ({ className, post }) => {
         className
       )}
     >
-      <Link href={`/${handle}`} className="absolute inset-0 rounded-lg"></Link>
+      <Link aria-label={title} href={`/${handle}`} className="absolute inset-0 rounded-lg"></Link>
 
       <div className="flex flex-col">
         <CategoryBadgeList categories={categories} />

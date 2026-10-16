@@ -65,7 +65,7 @@ const Card3: FC<Props> = ({ className, post }) => {
           wrapSize="size-8"
           iconSize="size-4"
         />
-        <Link href={`/${handle}`} className="absolute inset-0"></Link>
+        <Link aria-label={title} href={`/${handle}`} className="absolute inset-0"></Link>
       </div>
     </div>
   )

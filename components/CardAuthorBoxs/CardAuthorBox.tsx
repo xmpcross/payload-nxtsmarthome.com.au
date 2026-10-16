@@ -19,7 +19,7 @@ const CardAuthorBox: FC<Props> = ({ className, author }) => {
         className
       )}
     >
-      <Link href={`/authors/${handle}/`} className="absolute inset-0" />
+      <Link aria-label={name} href={`/authors/${handle}/`} className="absolute inset-0" />
       <Avatar className="size-20" src={avatar.src || ''} width={80} height={80} sizes="80px" />
       <div className="mt-3">
         <h2 className={`text-sm font-medium sm:text-base`}>

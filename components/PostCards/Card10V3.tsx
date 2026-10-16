@@ -95,7 +95,7 @@ const Card10V3: FC<Props> = ({ className, post, galleryType = 1 }) => {
         )}
 
         {postType === 'gallery' && galleryImgs?.length && (
-          <Link
+          <Link aria-hidden="true" tabIndex={-1}
             href={`/${handle}`}
             className="absolute inset-0 bg-neutral-900/20 opacity-0 transition-opacity group-hover:opacity-100"
           />

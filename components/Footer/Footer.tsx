@@ -83,7 +83,7 @@ const socials: { label: string; href: string; external?: boolean; icon: React.Re
       ]
     : []),
   {
-    label: 'Share on Twitter / X',
+    label: `Share ${site.name} on X (Twitter)`,
     href: `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareText}`,
     external: true,
     icon: (
@@ -93,7 +93,7 @@ const socials: { label: string; href: string; external?: boolean; icon: React.Re
     ),
   },
   {
-    label: 'Share on Reddit',
+    label: `Share ${site.name} on Reddit`,
     href: `https://www.reddit.com/submit?url=${shareUrl}&title=${shareText}`,
     external: true,
     icon: (
@@ -110,7 +110,7 @@ const socials: { label: string; href: string; external?: boolean; icon: React.Re
     ),
   },
   {
-    label: 'Share on WhatsApp',
+    label: `Share ${site.name} on WhatsApp`,
     href: `https://wa.me/?text=${shareText}%20${shareUrl}`,
     external: true,
     icon: (
@@ -244,7 +244,7 @@ const Footer = async () => {
         <p>
           © {year} {site.name}. Operated by {site.organisation.operator}.
         </p>
-        <a href="#" className="hover:text-primary-600 dark:hover:text-white">
+        <a href="#top" className="hover:text-primary-600 dark:hover:text-white">
           Back to top ↑
         </a>
       </div>

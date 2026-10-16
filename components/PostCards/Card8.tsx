@@ -35,7 +35,7 @@ const Card8: FC<Props> = ({ className, post, ratio = 'aspect-3/4 sm:aspect-2/1' 
     return (
       <div className="mt-3 text-neutral-300">
         <div className="relative flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
-          <Link href={`/authors/${author.handle}/`} className="absolute inset-0" />
+          <Link aria-label={author.name} href={`/authors/${author.handle}/`} className="absolute inset-0" />
           <span className="font-medium text-neutral-200 hover:text-white">{author.name}</span>
           <span className="font-medium">·</span>
           <LocalDate date={date} />
@@ -57,7 +57,7 @@ const Card8: FC<Props> = ({ className, post, ratio = 'aspect-3/4 sm:aspect-2/1' 
           sizes="(max-width: 600px) 480px, 800px"
         />
 
-        <Link
+        <Link aria-label={title}
           href={`/${handle}`}
           className="absolute inset-x-0 top-1/3 bottom-0 bg-linear-to-t from-black opacity-60 transition-opacity duration-300 group-hover:top-0 group-hover:opacity-70"
         />
@@ -70,7 +70,7 @@ const Card8: FC<Props> = ({ className, post, ratio = 'aspect-3/4 sm:aspect-2/1' 
       </div>
 
       <div className="absolute inset-x-0 bottom-0 flex flex-col p-4 sm:p-6">
-        <Link href={`/${handle}`} className="absolute inset-0" />
+        <Link aria-hidden="true" tabIndex={-1} href={`/${handle}`} className="absolute inset-0" />
         <CategoryBadgeList categories={categories} />
         <h2 className="mt-4 block text-lg font-semibold text-neutral-50 sm:text-2xl">
           <p className="line-clamp-2" title={title}>

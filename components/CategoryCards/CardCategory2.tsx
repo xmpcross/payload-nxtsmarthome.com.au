@@ -35,7 +35,7 @@ const CardCategory2: FC<Props> = ({ className, category, badge }) => {
       />
       <div className="mt-3">
         <h2 className={`text-base font-semibold`}>{name}</h2>
-        <Link className="absolute inset-0" href={`/categories/${handle}/`} />
+        <Link aria-label={name} className="absolute inset-0" href={`/categories/${handle}/`} />
         <span className={`mt-1 block text-sm text-neutral-500 dark:text-neutral-400`}>{count} articles</span>
       </div>
     </div>

@@ -1949,3 +1949,26 @@ p:not(
   padding-block: 10px;
   padding-inline: 0;
 }
+
+/* Single posts: nothing may widen the page past the viewport on phones
+   (audit: scrollWidth 465px on a 390px screen, from the byline row and the
+   related-posts carousel). `clip` rather than `hidden` so it does not create a
+   scroll container and break the sticky sidebar or anchor offsets. */
+.single-post-page {
+  overflow-x: clip;
+}
+.embla {
+  overflow-x: clip;
+}
+
+/* Wide comparison tables in article bodies scroll inside their own box on
+   narrow screens instead of widening the page. From md up they lay out as
+   normal tables. */
+@media (max-width: 767px) {
+  #article-body .prose table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

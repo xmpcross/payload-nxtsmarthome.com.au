@@ -17,6 +17,8 @@ interface Props {
   post: TPost
   /** Preload the image. Only for a card that can be the page's LCP element. */
   priority?: boolean
+  /** The image's `sizes`; pass a tight value where the card's slot is known. */
+  sizes?: string
 }
 
 const Card19: FC<Props> = ({
@@ -25,6 +27,7 @@ const Card19: FC<Props> = ({
   ratio = 'aspect-4/3 sm:aspect-1/1',
   post,
   priority = true,
+  sizes = '(max-width: 1024px) 100vw, 50vw',
 }) => {
   const { title, handle, featuredImage, categories, postType, likeCount, liked, commentCount, bookmarked } = post
 
@@ -36,11 +39,12 @@ const Card19: FC<Props> = ({
         ) : (
           <>
             <Image
-              sizes="(max-width: 1024px) 100vw, 50vw"
+              sizes={sizes}
               className="rounded-xl object-cover brightness-100 transition-[filter] duration-300 group-hover:brightness-75"
               src={featuredImage}
               alt={title}
-              priority={priority}
+              preload={priority}
+              fetchPriority={priority ? 'high' : undefined}
               fill
             />
             <PostTypeFeaturedIcon
@@ -49,14 +53,16 @@ const Card19: FC<Props> = ({
               wrapSize="size-7"
               iconSize="size-4"
             />
-            <Link href={`/${handle}`} className="absolute inset-0"></Link>
+            <Link href={`/${handle}`} className="absolute inset-0" aria-label={title}></Link>
           </>
         )}
       </div>
 
-      <Link
-        href={`/${handle}`}
-        className="absolute inset-x-0 bottom-0 block h-1/2 bg-linear-to-t from-black opacity-80"
+      {/* Decorative gradient: a div, not a third nameless link to the same post.
+          pointer-events-none lets clicks reach the image link beneath it. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 block h-1/2 bg-linear-to-t from-black opacity-80"
       />
 
       <div className="absolute inset-x-0 top-0 flex flex-wrap gap-x-2 gap-y-1 p-5 opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:px-7">
@@ -66,7 +72,7 @@ const Card19: FC<Props> = ({
       </div>
 
       <div className="absolute inset-x-0 bottom-0 flex grow flex-col p-5 sm:p-8">
-        <Link href={`/${handle}`} className="absolute inset-0" />
+        <Link href={`/${handle}`} className="absolute inset-0" aria-hidden="true" tabIndex={-1} />
         <CategoryBadgeList categories={categories} />
         <h2 className={clsx('mt-3 block font-semibold text-white line-clamp-2', titleClass)}>{title}</h2>
       </div>

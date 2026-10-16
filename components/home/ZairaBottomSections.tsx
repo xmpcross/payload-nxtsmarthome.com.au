@@ -2,6 +2,8 @@
 
 import React from 'react'
 import Link from 'next/link'
+import LocalDate from '@/components/LocalDate'
+import { site } from '@/lib/site'
 import type { TPost } from '@/data/posts'
 import type { TCategory } from '@/data/categories'
 import { responsiveImg } from '@/lib/image'
@@ -280,12 +282,12 @@ export default function ZairaBottomSections({ posts, categories = [] }: Props) {
                     <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-300">
                       <span className="flex items-center gap-1">
                         <svg className="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        BY {recentFeatured.author?.name || 'ZAIRA'}
+                        BY {recentFeatured.author?.name || site.name}
                       </span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
                         <svg className="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                        {recentFeatured.date || 'OCTOBER 11, 2025'}
+                        {recentFeatured.date ? <LocalDate date={recentFeatured.date} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /> : null}
                       </span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
@@ -315,7 +317,7 @@ export default function ZairaBottomSections({ posts, categories = [] }: Props) {
                       </h4>
                       <div className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
                         <svg className="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                        <span>{post.date || 'OCTOBER 11, 2025'}</span>
+                        {post.date ? <LocalDate date={post.date} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /> : null}
                       </div>
                     </div>
 
@@ -410,7 +412,7 @@ export default function ZairaBottomSections({ posts, categories = [] }: Props) {
 
                   <div className="flex flex-col justify-center space-y-3">
                     <span className="inline-block w-fit rounded bg-primary-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
-                      {trendingFeatured.categories?.[0]?.name || 'MOBILE'}
+                      {trendingFeatured.categories?.[0]?.name || 'Guide'}
                     </span>
 
                     <h3 className="text-lg sm:text-xl font-bold leading-snug text-neutral-900 dark:text-white line-clamp-2">
@@ -418,9 +420,9 @@ export default function ZairaBottomSections({ posts, categories = [] }: Props) {
                     </h3>
 
                     <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-                      <span>BY {trendingFeatured.author?.name || 'ZAIRA'}</span>
+                      <span>BY {trendingFeatured.author?.name || site.name}</span>
                       <span>•</span>
-                      <span>{trendingFeatured.date || 'OCTOBER 11, 2025'}</span>
+                      {trendingFeatured.date ? <LocalDate date={trendingFeatured.date} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /> : null}
                     </div>
 
                     <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 line-clamp-3 leading-relaxed">
@@ -459,15 +461,15 @@ export default function ZairaBottomSections({ posts, categories = [] }: Props) {
 
                     <div className="space-y-1.5">
                       <span className="inline-block rounded bg-primary-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
-                        {post.categories?.[0]?.name || 'MOBILE'}
+                        {post.categories?.[0]?.name || 'Guide'}
                       </span>
                       <h4 className="text-sm font-bold leading-snug text-neutral-900 group-hover:text-primary-600 dark:text-white dark:group-hover:text-primary-400 line-clamp-2 transition-colors">
                         {post.title}
                       </h4>
                       <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
-                        <span>BY {post.author?.name || 'ZAIRA'}</span>
+                        <span>BY {post.author?.name || site.name}</span>
                         <span>•</span>
-                        <span>{post.date || 'OCTOBER 11, 2025'}</span>
+                        {post.date ? <LocalDate date={post.date} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /> : null}
                       </div>
                     </div>
                   </Link>
@@ -481,57 +483,27 @@ export default function ZairaBottomSections({ posts, categories = [] }: Props) {
         {/* RIGHT SIDEBAR COLUMN (4 cols) */}
         <div className="space-y-10 lg:col-span-4">
           
-          {/* SIDEBAR BLOCK 1: SUBSCRIBE & FOLLOWERS */}
+          {/* SIDEBAR BLOCK 1: FOLLOW. Only channels that exist. The template's six
+              "#" social tiles and its "Daily Newsletter" form (which submitted
+              nowhere) were removed (audit CQ10): there is no newsletter. */}
           <section>
-            <ZairaHeader title="Subscribe & Followers" as="h3" />
+            <ZairaHeader title="Follow NXT Smart Home" as="h3" />
             <div className="grid grid-cols-2 gap-2.5">
               {[
-                { name: 'Facebook', icon: 'M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z' },
-                { name: 'Twitter', icon: 'M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z' },
-                { name: 'Instagram', icon: 'M16 4H8C5.79 4 4 5.79 4 8v8c0 2.21 1.79 4 4 4h8c2.21 0 4-1.79 4-4V8c0-2.21-1.79-4-4-4zm-4 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm4.5-7.5c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z' },
-                { name: 'Youtube', icon: 'M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33zM9.75 15.02V8.48l5.75 3.27-5.75 3.27z' },
-                { name: 'Linkedin', icon: 'M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2zM4 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2z' },
-                { name: 'Pinterest', icon: 'M12 0C5.37 0 0 5.37 0 12c0 5.08 3.16 9.42 7.63 11.17-.11-.95-.2-2.41.04-3.45.22-.94 1.42-6.02 1.42-6.02s-.36-.72-.36-1.78c0-1.67.97-2.92 2.18-2.92 1.03 0 1.52.77 1.52 1.69 0 1.03-.66 2.58-1 4.01-.28 1.2.6 2.18 1.78 2.18 2.14 0 3.78-2.26 3.78-5.5 0-2.88-2.07-4.89-5.02-4.89-3.42 0-5.43 2.57-5.43 5.22 0 1.03.4 2.14.9 2.74.1.12.11.23.08.36-.09.38-.3.1.22-1.22-.52-.08-.12-.22-.16-.36-.16-1.48 0-2.4-1.07-2.4-2.58 0-2.1 1.53-4.04 4.41-4.04 2.32 0 4.12 1.65 4.12 3.86 0 2.3-1.45 4.15-3.46 4.15-.68 0-1.32-.35-1.54-.77l-.42 1.6c-.15.58-.56 1.31-.83 1.76A12 12 0 0 0 12 24c6.63 0 12-5.37 12-12S18.63 0 12 0z' },
-              ].map((social) => (
+                ...(site.social.facebook ? [{ name: 'Facebook', href: site.social.facebook, external: true }] : []),
+                { name: 'RSS feed', href: '/feed.xml', external: false },
+              ].map((item) => (
                 <a
-                  key={social.name}
-                  href="#"
-                  className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200/80 bg-neutral-100/80 px-3 py-2.5 text-xs font-bold text-neutral-700 transition hover:border-primary-500 hover:bg-primary-50 hover:text-primary-600 dark:border-neutral-800 dark:bg-neutral-800/80 dark:text-neutral-200 dark:hover:border-primary-400 dark:hover:bg-neutral-700"
+                  key={item.name}
+                  href={item.href}
+                  {...(item.external ? { target: '_blank', rel: 'noopener' } : {})}
+                  className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-neutral-200/80 bg-neutral-100/80 px-3 py-2.5 text-xs font-bold text-neutral-700 transition hover:border-primary-500 hover:bg-primary-50 hover:text-primary-600 dark:border-neutral-800 dark:bg-neutral-800/80 dark:text-neutral-200 dark:hover:border-primary-400 dark:hover:bg-neutral-700"
                 >
-                  <svg className="size-3.5 fill-current" viewBox="0 0 24 24">
-                    <path d={social.icon} />
-                  </svg>
-                  <span>{social.name}</span>
+                  <span>{item.name}</span>
                 </a>
               ))}
             </div>
           </section>
-
-          {/* SIDEBAR BLOCK 2: DAILY NEWSLETTER */}
-          <div className="relative overflow-hidden rounded-2xl bg-[#112240] p-6 text-center text-white shadow-xl border border-neutral-800">
-            <h3 className="text-[1.2rem] font-bold tracking-tight text-white mb-1.5">
-              Daily Newsletter
-            </h3>
-            <p className="text-xs text-neutral-300 mb-5 max-w-xs mx-auto leading-relaxed">
-              Get All The Top Stories From Blogs To Keep Track.
-            </p>
-
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-3">
-              <input
-                type="email"
-                placeholder="Enter your e-mail"
-                className="w-full rounded-xl bg-white/10 px-4 py-3 text-xs text-white placeholder-neutral-400 backdrop-blur-sm border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                required
-              />
-              <button
-                type="submit"
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary-600 py-3 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-primary-500 shadow-md"
-              >
-                <span>Subscribe Now</span>
-                <svg className="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
-              </button>
-            </form>
-          </div>
 
           {/* SIDEBAR BLOCK 3: HOT CATEGORIES */}
           <section>
@@ -595,14 +567,14 @@ export default function ZairaBottomSections({ posts, categories = [] }: Props) {
                   {/* Title & Metadata */}
                   <div className="flex flex-1 flex-col justify-center min-w-0 space-y-1">
                     <span className="inline-block w-fit rounded border border-neutral-300 dark:border-neutral-700 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400">
-                      {post.categories?.[0]?.name || 'MOBILE'}
+                      {post.categories?.[0]?.name || 'Guide'}
                     </span>
                     <h4 className="text-xs sm:text-sm font-bold leading-snug text-neutral-900 group-hover:text-primary-600 dark:text-white dark:group-hover:text-primary-400 line-clamp-2 transition-colors">
                       {post.title}
                     </h4>
                     <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
                       <svg className="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                      <span>{post.date || 'OCTOBER 11, 2025'}</span>
+                      {post.date ? <LocalDate date={post.date} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /> : null}
                     </div>
                   </div>
                 </Link>
@@ -726,7 +698,7 @@ export default function ZairaBottomSections({ posts, categories = [] }: Props) {
                     </div>
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-[11px] font-semibold text-neutral-400 dark:border-neutral-800">
-                    <span>{post.date || 'SEPTEMBER 11, 2025'}</span>
+                    {post.date ? <LocalDate date={post.date} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /> : null}
                     <span>{post.readingTime || 2} MIN READ</span>
                   </div>
                 </Link>
@@ -764,15 +736,15 @@ export default function ZairaBottomSections({ posts, categories = [] }: Props) {
 
                   <div className="relative z-10 space-y-1.5">
                     <span className="inline-block rounded bg-primary-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
-                      {popularTechFeatured.categories?.[0]?.name || 'MOBILE'}
+                      {popularTechFeatured.categories?.[0]?.name || 'Guide'}
                     </span>
                     <h4 className="text-base font-bold leading-snug text-white group-hover:text-primary-300 line-clamp-2 transition-colors">
                       {popularTechFeatured.title}
                     </h4>
                     <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-300">
-                      <span>BY {popularTechFeatured.author?.name || 'ZAIRA'}</span>
+                      <span>BY {popularTechFeatured.author?.name || site.name}</span>
                       <span>•</span>
-                      <span>{popularTechFeatured.date || 'OCTOBER 11, 2025'}</span>
+                      {popularTechFeatured.date ? <LocalDate date={popularTechFeatured.date} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /> : null}
                     </div>
                   </div>
                 </Link>
@@ -808,7 +780,7 @@ export default function ZairaBottomSections({ posts, categories = [] }: Props) {
                     </h4>
                     <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
                       <svg className="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                      <span>{post.date || 'OCTOBER 11, 2025'}</span>
+                      {post.date ? <LocalDate date={post.date} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /> : null}
                     </div>
                   </div>
                 </Link>

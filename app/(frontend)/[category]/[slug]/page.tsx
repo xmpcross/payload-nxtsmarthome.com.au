@@ -34,7 +34,7 @@ import {
 } from '@/lib/content';
 import { getProductsBySlugs } from '@/lib/products';
 import { site } from '@/lib/site';
-import { articleJsonLd, breadcrumbJsonLd, faqJsonLd, itemListJsonLd, metaDescription } from '@/lib/seo';
+import { articleJsonLd, breadcrumbJsonLd, faqJsonLd, itemListJsonLd, metaDescription, pageAlternates, pageTitle, titleText } from '@/lib/seo';
 import { responsiveImg } from '@/lib/image'
 
 // Articles refresh from Strapi every 5 minutes (ISR); new slugs render on demand.
@@ -62,12 +62,15 @@ export async function generateMetadata({
   const url = articleHref(article);
   // Search snippet: the CMS seoTitle / seoDescription when set (audit S4/S5),
   // else the H1 and the excerpt, trimmed at a sentence or word boundary.
-  const title = article.seoTitle || article.title;
+  // pageTitle: a seoTitle already ending in " | NXT Smart Home" is not given the
+  // suffix twice, and one too long for it goes out without it.
+  const pageTitleValue = pageTitle(article.seoTitle || article.title);
+  const title = titleText(pageTitleValue);
   const description = metaDescription(article.seoDescription || article.description) ?? '';
   return {
-    title,
+    title: pageTitleValue,
     description,
-    alternates: { canonical: url },
+    alternates: pageAlternates(url),
     openGraph: {
       type: 'article',
       title,
@@ -178,7 +181,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
             <nav aria-label="Breadcrumb" className="text-sm text-neutral-500 dark:text-neutral-400">
               <ol className="flex flex-wrap items-center gap-2">
                 <li>
-                  <Link href="/" className="hover:text-neutral-900 dark:hover:text-white">
+                  <Link href="/" className="inline-flex min-h-11 items-center hover:text-neutral-900 dark:hover:text-white">
                     Home
                   </Link>
                 </li>
@@ -188,7 +191,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
                     <li>
                       <Link
                         href={`/categories/${article.categoryMeta.slug}/`}
-                        className="hover:text-neutral-900 dark:hover:text-white"
+                        className="inline-flex min-h-11 items-center hover:text-neutral-900 dark:hover:text-white"
                       >
                         {article.categoryMeta.name}
                       </Link>
@@ -206,8 +209,16 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
               {article.description}
             </p>
             <Divider />
-            <div className="flex flex-wrap items-center gap-5">
-              <SingleMeta author={post.author} date={article.date} updated={article.updated} readingTime={post.readingTime} />
+            <div className="flex min-w-0 flex-wrap items-center gap-5">
+              {/* Read time from the rendered word count (225 wpm). The CMS's own
+                  readingTimeMinutes is stale on rewritten guides ("6 min read" on
+                  ~3,800 words), and lib/content.ts prefers it over the count. */}
+              <SingleMeta
+                author={post.author}
+                date={article.date}
+                updated={article.updated}
+                readingTime={article.wordCount ? Math.max(1, Math.round(article.wordCount / 225)) : post.readingTime}
+              />
               <SingleMetaAction className="ms-auto" handle={post.handle} title={article.title} />
             </div>
           </div>
@@ -225,7 +236,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
         </header>
 
         <div className="container mt-12 flex flex-col lg:flex-row">
-          <article className="w-full lg:w-3/5 xl:w-2/3 xl:pe-20">
+          <article className="w-full min-w-0 lg:w-3/5 xl:w-2/3 xl:pe-20">
             <Disclosure />
 
             {article.keyTakeaway && (

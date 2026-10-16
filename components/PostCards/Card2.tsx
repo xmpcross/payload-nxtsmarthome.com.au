@@ -42,7 +42,7 @@ const Card2: FC<Props> = ({ className, size = 'normal', post }) => {
           src={featuredImage}
           alt={title}
         />
-        <Link href={`/${handle}`} className="absolute inset-0 z-0"></Link>
+        <Link aria-label={title} href={`/${handle}`} className="absolute inset-0 z-0"></Link>
         <PostTypeFeaturedIcon
           className="absolute bottom-3 left-3"
           postType={postType}

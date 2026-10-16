@@ -46,8 +46,10 @@ function RetailerMark({ name }: { name: string }) {
         <img
           src={src}
           alt={name}
+          width={72}
+          height={28}
           loading="lazy"
-          className="max-h-full max-w-full object-contain"
+          className="h-full w-full object-contain"
         />
       </span>
     );
@@ -111,7 +113,7 @@ export default function RetailerPriceList({
             <AffiliateLink
               href={retailer.url}
               subId={subId}
-              className="shrink-0 rounded-md bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-700 dark:bg-primary-600 dark:hover:bg-primary-500"
+              className="inline-flex min-h-11 shrink-0 items-center rounded-md bg-primary-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-primary-700 dark:bg-primary-600 dark:hover:bg-primary-500"
             >
               View
             </AffiliateLink>
