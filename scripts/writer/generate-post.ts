@@ -1111,4 +1111,6 @@ function fatal(message: string): never {
   process.exit(1);
 }
 
-run().catch(err => fatal(err.message));
+// Exit explicitly: payload.destroy() leaves the database pool open, and the
+// process used to sit idle after "Done." until killed.
+run().then(() => process.exit(0)).catch(err => fatal(err.message));

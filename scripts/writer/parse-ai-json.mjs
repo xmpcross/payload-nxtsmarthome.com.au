@@ -139,7 +139,29 @@ function extractPostFields(raw) {
   return result;
 }
 
+/*
+ * Some models double-escape their JSON, and the field-extraction fallback
+ * below returns raw JSON string text, so a body can arrive with literal \n,
+ * \" and \t sequences (a whole article then renders as one paragraph). A
+ * string that has escape sequences but no real line breaks is unescaped once.
+ */
+function unescapeDoubled(value) {
+  if (typeof value === 'string') {
+    if (!/\\[n"t\\]/.test(value) || value.includes('\n')) return value;
+    return value.replace(/\\(["\\nt])/g, (_, c) => ({ n: '\n', t: '\t' })[c] ?? c);
+  }
+  if (Array.isArray(value)) return value.map(unescapeDoubled);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, unescapeDoubled(v)]));
+  }
+  return value;
+}
+
 export function parseAiJson(text, { providerName = 'AI' } = {}) {
+  return unescapeDoubled(parseAiJsonRaw(text, { providerName }));
+}
+
+function parseAiJsonRaw(text, { providerName = 'AI' } = {}) {
   const objectText = extractJsonObject(text);
 
   const attempts = [
