@@ -6,7 +6,6 @@ import { catalogue } from './catalogue';
  * Original JSON and Markdown files are retained only as migration archives.
  */
 import type { ProductRef, RetailerLink } from './content';
-import { withShortLinks } from './geniuslink-links';
 
 
 export interface Product extends ProductRef {
@@ -144,7 +143,7 @@ export async function getAllProducts(): Promise<Product[]> {
  return (await catalogue()).filter(p=>p.editorial?.enabled).map(p=>({
   slug:p.slug,name:p.editorial.name||p.name,brand:p.editorial.brand||p.brand,
   ...Object.fromEntries(Object.entries(p.editorial).filter(([,v])=>v!==null)),match:p.editorial.match??[],
-  retailers:withShortLinks<RetailerLink>(liveRetailers(p.editorial.retailers??p.retailers)),
+  retailers:liveRetailers<RetailerLink>(p.editorial.retailers??p.retailers),
  })).sort((a,b)=>a.slug.localeCompare(b.slug));
 }
 
@@ -230,7 +229,7 @@ export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
 export async function getAllTopProducts(): Promise<TopProduct[]> {
  const keepSeeded=process.env.PRODUCTS_KEEP_SEEDED_RATINGS==='1';
  return (await catalogue()).filter(p=>p.catalogueListing!==false).map(raw=>{
-  const product={...raw,retailers:withShortLinks(liveRetailers(raw.retailers))};
+  const product={...raw,retailers:liveRetailers(raw.retailers)};
   return !keepSeeded&&typeof product.ratingReal==='number'
    ? {...product,rating:product.ratingReal,reviewCount:product.reviewCountReal??product.reviewCount}
    : product;

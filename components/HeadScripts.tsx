@@ -1,9 +1,9 @@
 /**
- * Google Analytics, Google AdSense and Geniuslink, rendered into
+ * Google Analytics, Ahrefs Web Analytics and Google AdSense, rendered into
  * <head> on every page.
  *
  * These used to be injected into the exported HTML after the build
- * (scripts/inject-ga.mjs, scripts/inject-geniuslink.mjs), because anything React
+ * (scripts/inject-ga.mjs), because anything React
  * renders inline also appears a second time in the RSC payload, and verifiers
  * that text-scan the page then report the tag twice. The site now runs on
  * `next start`, where there is no exported HTML to post-process. So the inline
@@ -13,10 +13,9 @@
  *
  * GA runs with Consent Mode v2 defaults denied until the cookie banner grants
  * them. Ahrefs Web Analytics loads on every page: Ahrefs describes it as
- * using zero cookies and collecting no personal data, so it is not gated. Geniuslink converts Amazon links on page load
- * and again after client-side navigation (public/js/geniuslink-init.js); no TSID, no script.
- * Geniuslink is the only affiliate integration: Sovrn and Takeads were removed
- * on 6 Oct 2026.
+ * using zero cookies and collecting no personal data, so it is not gated.
+ * No affiliate script loads: Sovrn and Takeads were removed on 6 Oct 2026 and
+ * Geniuslink on 17 Oct 2026 (user request).
  *
  * AdSense, two stages (lib/ads.ts). With NEXT_PUBLIC_ADSENSE_CLIENT set, only
  * the google-adsense-account meta renders, which is what Google needs to
@@ -32,13 +31,9 @@
 import { ADSENSE_CLIENT, ADS_ENABLED } from '@/lib/ads';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-SY9XCRZH2K';
-const GENIUSLINK_TSID = (process.env.NEXT_PUBLIC_GENIUSLINK_TSID || '').trim();
-const GENIUSLINK_BASE = process.env.NEXT_PUBLIC_GENIUSLINK_BASE_URL || 'https://buy.geni.us';
-const GENIUSLINK_PRESERVE = process.env.NEXT_PUBLIC_GENIUSLINK_PRESERVE_EXISTING === 'true';
 const AHREFS_KEY = 'PWhqv6+CSsiInhS/JMQ2SA';
 
 export default function HeadScripts() {
-  const geniuslink = /^\d+$/.test(GENIUSLINK_TSID);
   return (
     <>
       {/* Verification only: no ads without ADS_ENABLED. */}
@@ -59,18 +54,6 @@ export default function HeadScripts() {
       <script src="/js/ga-init.js" data-ga-id={GA_ID} defer />
       {/* Ahrefs Web Analytics: cookieless by Ahrefs' account, so not consent-gated. */}
       <script src="https://analytics.ahrefs.com/analytics.js" data-key={AHREFS_KEY} async />
-      {geniuslink && (
-        <>
-          <script src="https://geniuslinkcdn.com/snippet.min.js" defer />
-          <script
-            src="/js/geniuslink-init.js"
-            defer
-            data-tsid={GENIUSLINK_TSID}
-            data-base-url={GENIUSLINK_BASE}
-            data-preserve-existing={GENIUSLINK_PRESERVE ? 'true' : 'false'}
-          />
-        </>
-      )}
     </>
   );
 }

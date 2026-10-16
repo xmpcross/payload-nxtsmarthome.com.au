@@ -95,9 +95,6 @@ const defaultMetadata: Metadata = {
   // Search engine ownership verification. Rendered into <head> on every page.
   // Add `google: '<code>'` here when Search Console gives you one.
   // Verification codes are per-site — do not copy one between domains.
-  //
-  // Affiliate link affiliation is handled by the Geniuslink script injected
-  // from <head>; see components/HeadScripts.tsx.
   verification: {
     other: {
       'msvalidate.01': '057158952120360611CA2F41AD7D5B50',
