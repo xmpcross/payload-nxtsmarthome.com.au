@@ -1,0 +1,14 @@
+{
+  "name": "nxtsmarthome-writer",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AI article generator for nxtsmarthome.com.au — writes directly to the Payload/PostgreSQL database",
+  "scripts": {
+    "generate": "bash run.sh"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.2.1",
+    "slugify": "^1.6.6",
+    "yargs": "^17.7.2"
+  }
+}

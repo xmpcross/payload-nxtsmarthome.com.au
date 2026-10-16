@@ -1,0 +1,9 @@
+{
+  "extends": "../../sites/nxtsmarthome.com.au/app/tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "baseUrl": ".",
+    "noEmit": true
+  },
+  "include": ["*.ts"]
+}

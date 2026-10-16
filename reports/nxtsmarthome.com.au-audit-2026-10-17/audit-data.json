@@ -1,0 +1,124 @@
+{
+  "meta": {
+    "domain": "nxtsmarthome.com.au",
+    "audit_date": "2026-10-17",
+    "pages_crawled": 427,
+    "sitemap_urls": 336,
+    "data_sources": ["Live crawl (427 URLs)", "Local Lighthouse 13.5 lab runs (14)", "Source code review (Payload 3.90 / Next.js 16)", "WebSearch SERP sampling", "Common Crawl (cached)"],
+    "limitations": ["No Google API / CrUX / GSC / GA4 credentials: performance is lab-only, no ranking or traffic data", "PageSpeed Insights rate-limited: no Lighthouse Agentic Browsing fraction", "No DataForSEO or Moz: no referring-domain data", "Initial crawler followed redirects silently; redirect-related findings were re-verified with curl"]
+  },
+  "summary": {
+    "health_score": 68,
+    "business_type": "Affiliate publisher: Australian smart-home guides + product catalogue (non-local, research-based, no hands-on testing)",
+    "top_findings": [
+      "Article bylines are assigned at random by the writer script (generate-post.ts) and author pages contradict the bylines - deceptive-authorship risk",
+      "About 45 affiliate buy buttons on ~63 pages point to /goto?url=..., which returns 404",
+      "47 of 84 articles cite no sources, including electrical-safety / tenancy / legal topics, contradicting /how-we-test/",
+      "Mobile LCP 4.9-6.9s on all tested pages (lab); product pages also fail CLS (0.16-0.19) from an unsized hero image",
+      "Money queries ('best robot vacuum australia', 'best smart plug australia') want ranked lists; the site serves explainers with no picks tables"
+    ],
+    "quick_wins": [
+      "Fix the escaped-quote links in /security-and-cameras/door-window-sensors-entry-alerts/ via Payload admin (5 broken links)",
+      "Point internal links at canonical slash URLs (59 hrefs) and remove the 13 dead /articles/page/N/ links from /sitemap/ and 12 '//' links from /all-topics/",
+      "Remove the duplicated brand from titles and trim titles to <=60 chars in the title template",
+      "Add width/height + fetchPriority=high to the product hero image (fixes CLS on 230 URLs)",
+      "Shrink the mobile cookie banner from 39% of the viewport to a <=100px bar"
+    ]
+  },
+  "categories": [
+    {
+      "name": "Technical SEO",
+      "score": 76,
+      "what_works": ["Fully server-rendered", "http/www -> https apex in one hop", "Wrong-category, legacy and no-slash URLs 308 to canonical", "True 404s with noindex", "Valid robots.txt; sitemap of 336 URLs all 200 + indexable", "Canonical, lang and single H1 on every page"],
+      "findings": [
+        {"title": "Dead /goto affiliate links", "severity": "High", "description": "45 entries in app/public/data/products.json use /goto?url=CAES...; rendered as buy buttons on ~63 pages; /goto 308s to /goto/ then 404s. No route or nginx rule exists.", "recommendation": "Replace with real retailer URLs in Payload Offers, or add a /goto route that validates and redirects to approved retailer hosts."},
+        {"title": "Malformed escaped hrefs in one article", "severity": "High", "description": "door-window-sensors-entry-alerts body contains \\\"https:/... links producing 5 404 URLs; content lives in the Payload DB.", "recommendation": "Edit the article in Payload admin; add a publish-time validation rejecting \\\" in Markdown bodies."},
+        {"title": "Internal links to redirecting URLs", "severity": "Medium", "description": "59 internal hrefs use no-slash or '//' forms (12 on /all-topics/), and /sitemap/ links 13 /articles/page/N/ URLs that 308 to /articles/.", "recommendation": "Normalise hrefs to trailing-slash canonical form in the link helpers; drop pagination links from app/(frontend)/sitemap/page.tsx:96,140."},
+        {"title": "404 template emits conflicting robots tags", "severity": "Medium", "description": "Both noindex and 'index, follow', plus canonical to the homepage.", "recommendation": "Emit only noindex on 404s and drop the canonical."},
+        {"title": "Year-long s-maxage on product pages and /search/", "severity": "Medium", "description": "s-maxage=31536000; latent risk of stale prices if Cloudflare starts caching HTML.", "recommendation": "Use s-maxage=300 + stale-while-revalidate like articles."},
+        {"title": "Sitemap lastmod partly synthetic", "severity": "Low", "description": "169 product URLs carry bulk-import timestamps; 7 CMS pages share one save time; hubs inherit newest-article date.", "recommendation": "Use real content-modified dates only."},
+        {"title": "ads.txt 404, short HSTS, no CSP, x-powered-by leak", "severity": "Low", "description": "Security/monetisation hygiene.", "recommendation": "Publish ads.txt when AdSense is enabled; HSTS 1y + includeSubDomains; remove x-powered-by."}
+      ]
+    },
+    {
+      "name": "Content Quality",
+      "score": 56,
+      "what_works": ["Honest trust pages: research-only, AI drafting disclosed on /about/, 'has not tested' on products", "Articles since 7 Oct have Sources sections and government links", "Product pages are not copy-paste (3-7% shared text)", "Affiliate notice above the fold on articles"],
+      "findings": [
+        {"title": "Random author bylines", "severity": "High", "description": "generate-post.ts picks the author via Math.random(); author bios claim articles bylined to someone else; no credentials or sameAs for any author.", "recommendation": "Assign authors deliberately (or use an editorial-team byline), reconcile author pages, add real credentials; confirm all named authors are real people."},
+        {"title": "Unsourced articles on YMYL-adjacent topics", "severity": "High", "description": "47/84 articles have no editorial outbound links; 42 electrical/privacy/tenancy articles cite no official source.", "recommendation": "Back-fill a Sources block with regulator links, starting with the electrical-work and tenancy articles."},
+        {"title": "Titles over-promise", "severity": "High", "description": "e.g. 'Home Battery Rebate 2026' never names the programme; 'Real Numbers' running-costs article gives no figure.", "recommendation": "Rewrite or retitle; add concrete AU figures with sources."},
+        {"title": "Scaled-content pattern", "severity": "Medium", "description": "18 articles published in 4 minutes on 23 Aug; 41 share one dateModified; unlabeled AI hero images.", "recommendation": "Stagger publishing, only bump dateModified on real edits, label AI imagery."},
+        {"title": "Non-AU products and a safety contradiction", "severity": "Medium", "description": "Aqara H1 EU switch recommended though its page says it won't fit AU boxes; kettle automation suggested though another article says not to.", "recommendation": "Remove non-AU picks; reconcile safety advice."},
+        {"title": "Cannibalisation", "severity": "Medium", "description": "5 overlapping smart-plug articles; 3 near-identical lighting-scene articles.", "recommendation": "Consolidate and 301 the weaker URLs."},
+        {"title": "Meta descriptions too long", "severity": "Medium", "description": "224 descriptions >160 chars (product median 328).", "recommendation": "Cap the product description template at ~155 chars."}
+      ]
+    },
+    {
+      "name": "On-Page SEO",
+      "score": 65,
+      "what_works": ["Exactly one H1 per page", "Unique titles on all canonical pages", "Self-referencing canonicals", "Strong internal linking: 0 orphan sitemap URLs"],
+      "findings": [
+        {"title": "Titles too long", "severity": "Medium", "description": "385 of 421 titles exceed 60 chars; some repeat the brand ('NXT Smart Home AU | NXT Smart Home').", "recommendation": "Shorten the template suffix; drop duplicate brand."},
+        {"title": "Product H1s drop the brand", "severity": "Medium", "description": "e.g. 'Hub M100' rather than 'Aqara Hub M100'.", "recommendation": "Prefix brand in product H1 and title."},
+        {"title": "Default OG data on product pages", "severity": "Medium", "description": "All product pages use the default og:title and og-default.png; share links point to the homepage.", "recommendation": "Emit per-product og:title, og:image and share URLs."},
+        {"title": "Noindexed category linked sitewide", "severity": "Low", "description": "/categories/smart-door-locks/ is noindex,follow but linked from 421 pages.", "recommendation": "Either populate and index it or remove it from navigation."}
+      ]
+    },
+    {
+      "name": "Schema / Structured Data",
+      "score": 80,
+      "what_works": ["0 JSON-LD parse errors", "Central generation in lib/seo.ts", "BreadcrumbList on 412 pages", "No self-serving ratings markup", "AUD-only verified offers"],
+      "findings": [
+        {"title": "SearchAction targets a disallowed URL", "severity": "Medium", "description": "Emitted on all pages; /search/ is robots-disallowed and the sitelinks search box is retired.", "recommendation": "Remove SearchAction."},
+        {"title": "Offer URLs are affiliate redirects", "severity": "Medium", "description": "geni.us and tracked eBay URLs in Offer.url; some price ranges mix variants/sellers.", "recommendation": "Use canonical retailer product URLs; add itemCondition; exclude mismatched listings."},
+        {"title": "Static pages lack page schema", "severity": "Medium", "description": "about, contact, how-we-test, disclosure etc. have no page-level schema or breadcrumb.", "recommendation": "Add AboutPage/ContactPage/WebPage + BreadcrumbList."},
+        {"title": "Weak entity linking", "severity": "Low", "description": "Organization sameAs only Facebook; Person has no sameAs/image; Article author has no @id.", "recommendation": "Add @id links and sameAs profiles."}
+      ]
+    },
+    {
+      "name": "Performance (CWV)",
+      "score": 76,
+      "what_works": ["TTFB 17-117ms", "CLS 0 on home, listings and articles", "Desktop passes everywhere (LCP 0.9-1.45s)", "Self-hosted fonts, WebP via next/image", "gtag deferred, AdSense gated off"],
+      "findings": [
+        {"title": "Mobile LCP fails on all tested pages (lab)", "severity": "High", "description": "4.9-6.9s; render-blocking 60KB CSS; home LCP image has no fetchpriority and loads at 2x the needed width.", "recommendation": "Inline critical CSS; set fetchPriority='high' explicitly and tighten sizes."},
+        {"title": "Product page CLS", "severity": "High", "description": "0.158-0.191 from the unsized hero <img> at app/(frontend)/products/[slug]/page.tsx:157-161 (230 URLs).", "recommendation": "Add width/height/aspect-ratio and fetchPriority='high'."},
+        {"title": "5,975 images without dimensions", "severity": "Medium", "description": "Product cards, retailer lists, article images.", "recommendation": "Use next/image or explicit dimensions."},
+        {"title": "JavaScript cost", "severity": "Medium", "description": "~23 scripts / ~560KB per page; TBT 164-326ms mobile.", "recommendation": "Lazy-load search, audio, aside and cookie-banner components."},
+        {"title": "HTML not edge-cached", "severity": "Medium", "description": "cf-cache-status: DYNAMIC despite s-maxage=300.", "recommendation": "Add a Cloudflare Cache Rule for HTML (bypass on admin/preview cookies)."}
+      ]
+    },
+    {
+      "name": "AI Search Readiness",
+      "score": 65,
+      "what_works": ["All search/citation AI crawlers allowed", "Server-rendered HTML with FAQ answers", "Strong AU-specific information", "Newer articles open with a direct answer", "Agent-UX heuristic 90/100; labelled contact form"],
+      "findings": [
+        {"title": "No comparison tables on vs/best pages", "severity": "High", "description": "Only 1 of 15 sampled comparison/buying articles has an HTML table.", "recommendation": "Template a comparison table for every vs/best/buying-guide page."},
+        {"title": "Thin brand/author entity footprint", "severity": "High", "description": "sameAs only Facebook; no author profiles beyond the site; brand searches return other companies.", "recommendation": "Build Organization/Person sameAs, author credentials, and off-site profiles."},
+        {"title": "Firewall contradicts robots.txt", "severity": "Medium", "description": "Cloudflare 403s GPTBot, ClaudeBot, CCBot, Amazonbot etc. while robots.txt allows all.", "recommendation": "Decide policy; align robots.txt; consider allowing Amazonbot (Alexa)."},
+        {"title": "Unlabelled interactive card overlays", "severity": "Medium", "description": "12 unnamed links on home, 22 on an article.", "recommendation": "aria-label or aria-hidden + tabindex=-1 on duplicate overlay anchors."},
+        {"title": "No llms.txt / Markdown delivery", "severity": "Low", "description": "Optional; Google ignores llms.txt.", "recommendation": "Optional: publish llms.txt."}
+      ]
+    },
+    {
+      "name": "Images",
+      "score": 60,
+      "what_works": ["0 images missing alt attribute", "WebP delivery via next/image", "Article hero sized with fetchpriority"],
+      "findings": [
+        {"title": "Missing width/height", "severity": "Medium", "description": "5,975 of 8,794 images (3,089 of 3,584 product images).", "recommendation": "Add dimensions."},
+        {"title": "AI hero images with garbled text", "severity": "Low", "description": "Visible nonsense text in guide and home card heroes; unlabeled AI imagery.", "recommendation": "Regenerate without text or use real photos; label AI images."},
+        {"title": "Low-res white-background product cut-outs on dark theme", "severity": "Low", "description": "Render as white boxes.", "recommendation": "Use transparent PNG/WebP or a light card."},
+        {"title": "1,852 empty alt attributes", "severity": "Info", "description": "Fine for decorative images; verify product/card images are not among them.", "recommendation": "Audit empty-alt images for meaningful content."}
+      ]
+    }
+  ],
+  "action_plan": {
+    "phases": [
+      {"name": "Phase 1: Critical Fixes", "timeframe": "Week 1", "items": ["Fix random author assignment and reconcile author pages; confirm authors are real", "Repair or replace the 45 /goto affiliate links", "Fix escaped-quote links in door-window-sensors article", "Fix product hero CLS and LCP priority", "Fix mobile overflow on guide template; shrink cookie banner"]},
+      {"name": "Phase 2: High-Impact Improvements", "timeframe": "Weeks 2-3", "items": ["Back-fill Sources on electrical/tenancy/legal articles", "Add comparison/picks tables to vs/best/buying guides", "Create /robot-vacuums/best-robot-vacuum-australia/", "Inline critical CSS; set explicit fetchPriority; lazy-load non-critical JS", "Normalise internal links; remove dead pagination links", "Shorten titles; cap meta descriptions; brand in product H1s; per-product OG"]},
+      {"name": "Phase 3: Content & Authority", "timeframe": "Month 2", "items": ["Consolidate cannibalising smart-plug and lighting-scene articles with 301s", "Rewrite over-promising titles with sourced AU figures", "Remove non-AU product picks and reconcile safety advice", "Build Organization/author sameAs and off-site presence", "Add page schema to static pages; remove SearchAction; clean Offer URLs"]},
+      {"name": "Phase 4: Monitoring & Iteration", "timeframe": "Ongoing", "items": ["Set up Google API key for CrUX/GSC/PSI and re-run audit", "Create a drift baseline", "Decide AI crawler policy and align robots.txt with Cloudflare", "Stagger publishing; only bump dateModified on real edits"]}
+    ]
+  },
+  "artifacts": {"findings_dir": "findings/", "screenshots_dir": "screenshots/", "data_dir": "data/"}
+}
