@@ -130,86 +130,71 @@ export default function HomeLanding({
 
   return (
     <div className="space-y-14 pb-20 lg:space-y-20 lg:pb-28">
-      {/* Hero */}
-      <section aria-labelledby="home-hero" className="grid items-center gap-10 pt-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:pt-14">
-        <div className="min-w-0">
-          <h1 id="home-hero" className="leading-[1.08] font-bold tracking-tight text-balance text-neutral-900 dark:text-white">
-            Smart home advice built for Australian homes
-          </h1>
-          <p className="mt-5 max-w-[60ch] text-neutral-700 dark:text-neutral-300">
-            NXT Smart Home is an independent guide to choosing, setting up and running smart home technology in Australia.
-            We explain what works with 230V wiring and local plugs, what renters can install without drilling, which jobs
-            need a licensed electrician, and where each device is sold here.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link
-              href={START_HERE[0].href}
-              className="inline-flex min-h-12 items-center rounded-lg bg-primary-600 px-5 font-semibold text-white transition-colors hover:bg-primary-700"
-            >
-              Start with the beginner&apos;s guide
-            </Link>
-            <Link
-              href="/products/"
-              className="inline-flex min-h-12 items-center rounded-lg border border-neutral-300 px-5 font-semibold text-neutral-900 transition-colors hover:border-primary-600 dark:border-[#313131] dark:text-white dark:hover:border-primary-400"
-            >
-              Compare prices
-            </Link>
-          </div>
-          <nav aria-label="Popular starting points" className="mt-6 flex flex-wrap items-center gap-2 text-sm">
-            <span className="mr-1 font-semibold text-neutral-900 dark:text-white">Popular starting points:</span>
-            {START_HERE.slice(1).map((s) => (
-              <Link
-                key={s.href}
-                href={s.href}
-                className="inline-flex min-h-11 items-center rounded-lg border border-neutral-200 px-3.5 text-neutral-700 transition-colors hover:border-primary-600 hover:text-neutral-900 dark:border-[#313131] dark:text-neutral-300 dark:hover:border-primary-400 dark:hover:text-white"
-              >
-                {s.label}
+      {/* Hero and numbers: exact copy of the approved preview's top section.
+          Styled by .home-top in globals.css (unlayered, so the site-wide h1 and
+          paragraph sizes do not override the preview's values). */}
+      <div className="home-top">
+        <section aria-labelledby="home-hero" className="ht-hero">
+          <div className="ht-hero-text">
+            <h1 id="home-hero">Smart home advice built for Australian homes</h1>
+            <p className="ht-lede">
+              NXT Smart Home is an independent guide to choosing, setting up and running smart home technology in Australia.
+              We explain what works with 230V wiring and local plugs, what renters can install without drilling, which jobs
+              need a licensed electrician, and where each device is sold here.
+            </p>
+            <div className="ht-actions">
+              <Link href={START_HERE[0].href} className="ht-btn ht-btn-primary">
+                Start with the beginner&apos;s guide
               </Link>
-            ))}
-          </nav>
-        </div>
-        <figure className="relative m-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            {...responsiveImg('/images/about/home.webp', 680, '(min-width: 1024px) 45vw, 100vw')}
-            alt="A bright Australian home entrance with a smart video doorbell"
-            width={1024}
-            height={768}
-            fetchPriority="high"
-            className="aspect-[4/3] w-full rounded-lg object-cover"
-          />
-          <figcaption className="absolute inset-x-4 bottom-4 flex items-center gap-3 rounded-lg border border-neutral-200 bg-white/90 p-3.5 backdrop-blur dark:border-[#313131] dark:bg-[rgb(17,24,39)]/85">
+              <Link href="/products/" className="ht-btn ht-btn-ghost">
+                Compare prices
+              </Link>
+            </div>
+            <nav aria-label="Popular starting points" className="ht-start">
+              <strong>Popular starting points:</strong>
+              {START_HERE.slice(1).map((s) => (
+                <Link key={s.href} href={s.href}>
+                  {s.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+          <figure>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={icon('smart-home-hub')} alt="" width={44} height={44} className="size-11 shrink-0" />
-            <span className="min-w-0">
-              <span className="block text-[15px] font-semibold text-neutral-900 dark:text-white">Written for Australia</span>
-              <span className="block text-[13px] text-neutral-600 dark:text-neutral-400">
-                230V wiring, AS/NZS rules, local retailers and Australian Consumer Law
+            <img
+              {...responsiveImg('/images/about/home.webp', 680, '(min-width: 960px) 45vw, 100vw')}
+              alt="A bright Australian home entrance with a smart video doorbell"
+              width={1024}
+              height={768}
+              fetchPriority="high"
+            />
+            <figcaption>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={icon('smart-home-hub')} alt="" width={44} height={44} />
+              <span>
+                <b>Written for Australia</b>
+                <span>230V wiring, AS/NZS rules, local retailers and Australian Consumer Law</span>
               </span>
-            </span>
-          </figcaption>
-        </figure>
-      </section>
+            </figcaption>
+          </figure>
+        </section>
 
-      {/* Facts */}
-      <section aria-label="The site in numbers">
-        <ul className="grid grid-cols-2 border-y border-neutral-200 lg:grid-cols-4 dark:border-neutral-800">
-          {[
-            [articles.length, 'guides and explainers'],
-            [productCount, 'products with Australian prices'],
-            [retailerCount, 'Australian retailers compared'],
-            [0, 'paid placements or sponsored posts'],
-          ].map(([n, label], i) => (
-            <li
-              key={String(label)}
-              className={`flex flex-col gap-0.5 px-4 py-5 ${i % 2 ? 'border-l border-neutral-200 dark:border-neutral-800' : ''} ${i >= 2 ? 'border-t border-neutral-200 lg:border-t-0 dark:border-neutral-800' : ''} ${i === 2 ? 'lg:border-l' : ''}`}
-            >
-              <span className="text-[1.75rem] leading-tight font-bold text-neutral-900 tabular-nums dark:text-white">{n}</span>
-              <span className="text-sm text-neutral-600 dark:text-neutral-400">{label}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+        <section aria-label="The site in numbers" className="ht-facts">
+          <ul>
+            {[
+              [articles.length, 'guides and explainers'],
+              [productCount, 'products with Australian prices'],
+              [retailerCount, 'Australian retailers compared'],
+              [0, 'paid placements or sponsored posts'],
+            ].map(([n, label]) => (
+              <li key={String(label)}>
+                <b>{n}</b>
+                <span>{label}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
 
       {/* Services */}
       <section aria-labelledby="home-services">

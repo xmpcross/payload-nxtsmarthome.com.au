@@ -1959,3 +1959,51 @@ p:not(
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/*
+ * Home page top section (hero + numbers): an exact copy of the approved
+ * preview's CSS (17 Oct 2026), value for value. Unlayered and scoped to
+ * .home-top so the site-wide h1 (2.5rem) and paragraph (1rem) rules do not
+ * override it. Colours follow the preview's light and dark tokens.
+ */
+.home-top {
+  --ht-ground: #ffffff; --ht-edge: rgb(229, 231, 235); --ht-rule: rgb(229, 231, 235);
+  --ht-ink: rgb(17, 24, 39); --ht-body: rgb(55, 65, 81); --ht-meta: rgb(75, 85, 99);
+  --ht-accent: #5955d1; --ht-accent-strong: #5955d1;
+}
+.dark .home-top {
+  --ht-ground: rgb(17, 24, 39); --ht-edge: #313131; --ht-rule: rgb(31, 41, 55);
+  --ht-ink: #ffffff; --ht-body: rgb(209, 213, 219); --ht-meta: rgb(156, 163, 175);
+  --ht-accent: #9895ff; --ht-accent-strong: #5955d1;
+}
+.home-top { font-size: 16px; line-height: 1.625; color: var(--ht-body); }
+.home-top .ht-hero { display: grid; gap: 40px; align-items: center; padding-block: 48px 8px; }
+@media (min-width: 960px) { .home-top .ht-hero { grid-template-columns: 1.05fr 1fr; gap: 56px; } }
+.home-top .ht-hero-text { min-width: 0; }
+.home-top .ht-hero h1 { font-size: clamp(2.25rem, 1.6rem + 2.2vw, 3.25rem); line-height: 1.08; font-weight: 700; letter-spacing: -0.025em; text-wrap: balance; color: var(--ht-ink); margin: 0; }
+.home-top .ht-hero .ht-lede { margin: 18px 0 0; font-size: 1.125rem; line-height: 1.625; max-width: 60ch; color: var(--ht-body); }
+.home-top .ht-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.home-top .ht-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border-radius: 8px; font-weight: 600; font-size: 16px; transition: background-color .2s, border-color .2s; }
+.home-top .ht-btn-primary { background: var(--ht-accent-strong); color: #ffffff; }
+.home-top .ht-btn-primary:hover { background: #514dcc; }
+.home-top .ht-btn-ghost { border: 1px solid var(--ht-edge); color: var(--ht-ink); }
+.home-top .ht-btn-ghost:hover { border-color: var(--ht-accent); }
+.home-top .ht-start { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 24px; font-size: 14px; }
+.home-top .ht-start strong { color: var(--ht-ink); margin-right: 4px; font-weight: 700; }
+.home-top .ht-start a { border: 1px solid var(--ht-edge); border-radius: 8px; padding: 10px 14px; min-height: 44px; display: inline-flex; align-items: center; color: var(--ht-body); }
+.home-top .ht-start a:hover { border-color: var(--ht-accent); color: var(--ht-ink); }
+.home-top figure { margin: 0; position: relative; }
+/* 621px tall, as the preview renders it (its 828x621 size attributes set the height). */
+.home-top figure > img { display: block; width: 100%; max-width: 100%; height: 621px; object-fit: cover; border-radius: 8px; }
+.home-top figcaption { position: absolute; left: 16px; right: 16px; bottom: 16px; background: color-mix(in srgb, var(--ht-ground) 88%, transparent); border: 1px solid var(--ht-edge); border-radius: 8px; padding: 14px 16px; display: flex; gap: 12px; align-items: center; backdrop-filter: blur(6px); }
+.home-top figcaption img { width: 44px; height: 44px; border-radius: 8px; flex: none; }
+.home-top figcaption b { color: var(--ht-ink); display: block; font-size: 15px; font-weight: 700; }
+.home-top figcaption span span { color: var(--ht-meta); font-size: 13px; }
+.home-top .ht-facts { padding-block: 32px 8px; }
+.home-top .ht-facts ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--ht-rule); border-bottom: 1px solid var(--ht-rule); }
+@media (min-width: 900px) { .home-top .ht-facts ul { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.home-top .ht-facts li { padding: 20px 16px; display: flex; flex-direction: column; gap: 2px; margin: 0; }
+.home-top .ht-facts li + li { border-left: 1px solid var(--ht-rule); }
+@media (max-width: 899px) { .home-top .ht-facts li:nth-child(3) { border-left: 0; } .home-top .ht-facts li:nth-child(n+3) { border-top: 1px solid var(--ht-rule); } }
+.home-top .ht-facts b { color: var(--ht-ink); font-size: 1.75rem; line-height: 1.2; font-weight: 700; font-variant-numeric: tabular-nums; }
+.home-top .ht-facts span { color: var(--ht-meta); font-size: 14px; }
