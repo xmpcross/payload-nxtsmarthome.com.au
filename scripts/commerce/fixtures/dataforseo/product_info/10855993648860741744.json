@@ -1,0 +1,132 @@
+{
+  "_fixture": "SYNTHETIC FIXTURE - hand-written test data shaped like a DataForSEO task_get/advanced response. Prices, sellers and URLs are invented; never write them to Payload.",
+  "_scenario": "In catalogue by googleProductId; 3 AU offers",
+  "version": "0.1.20250101",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "cost": 0,
+  "tasks_count": 1,
+  "tasks": [
+    {
+      "id": "fixture-10855993648860741744",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "cost": 0,
+      "result_count": 1,
+      "data": {
+        "tag": "10855993648860741744"
+      },
+      "result": [
+        {
+          "product_id": "10855993648860741744",
+          "location_code": 2036,
+          "language_code": "en",
+          "items_count": 1,
+          "items": [
+            {
+              "type": "product_info_element",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "position": "left",
+              "product_id": "10855993648860741744",
+              "title": "Aqara Hub M3 Matter Controller",
+              "description": "Synthetic description.",
+              "url": null,
+              "images": [],
+              "features": null,
+              "rating": null,
+              "seller_reviews_count": null,
+              "data_docid": null,
+              "gid": null,
+              "specifications": [
+                {
+                  "type": "shopping_specification",
+                  "block_name": null,
+                  "specification_name": "Brand",
+                  "specification_value": "Aqara"
+                },
+                {
+                  "type": "shopping_specification",
+                  "block_name": null,
+                  "specification_name": "GTIN",
+                  "specification_value": "6975833690173"
+                }
+              ],
+              "sellers": [
+                {
+                  "type": "product_seller",
+                  "title": "JB Hi-Fi",
+                  "url": "https://www.jbhifi.com.au/products/aqara-hub-m3-fake",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 219,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$219"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Amazon AU",
+                  "url": "https://www.amazon.com.au/dp/B0FAKEM301",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 199,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$199"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Harvey Norman",
+                  "url": "https://www.harveynorman.com.au/aqara-hub-m3-fake.html",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 229,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$229"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Desertcart",
+                  "url": "https://www.desertcart.com.au/products/fake-m3",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 180,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$180"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                }
+              ],
+              "variations": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

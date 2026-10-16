@@ -1,0 +1,126 @@
+{
+  "_fixture": "SYNTHETIC FIXTURE - hand-written test data shaped like a DataForSEO task_get/advanced response. Prices, sellers and URLs are invented; never write them to Payload.",
+  "_scenario": "Bunnings price change; eBay unchanged; Officeworks new retailer; Desertcart grey-market excluded; Woolworths not seen (recently checked, so not stale)",
+  "version": "0.1.20250101",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "cost": 0,
+  "tasks_count": 1,
+  "tasks": [
+    {
+      "id": "fixture-13193030532290410559",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "cost": 0,
+      "result_count": 1,
+      "data": {
+        "tag": "13193030532290410559"
+      },
+      "result": [
+        {
+          "product_id": "13193030532290410559",
+          "location_code": 2036,
+          "language_code": "en",
+          "items_count": 1,
+          "items": [
+            {
+              "type": "product_info_element",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "position": "left",
+              "product_id": "13193030532290410559",
+              "title": "Arlec Grid Connect Smart 4 Outlet Powerboard With USB A And C Charger",
+              "description": "Synthetic description.",
+              "url": null,
+              "images": [],
+              "features": null,
+              "rating": null,
+              "seller_reviews_count": null,
+              "data_docid": null,
+              "gid": null,
+              "specifications": [
+                {
+                  "type": "shopping_specification",
+                  "block_name": null,
+                  "specification_name": "Brand",
+                  "specification_value": "Arlec"
+                }
+              ],
+              "sellers": [
+                {
+                  "type": "product_seller",
+                  "title": "Bunnings Warehouse",
+                  "url": "https://www.bunnings.com.au/arlec-grid-connect-smart-4-outlet-powerboard-with-usb-a-and-c-charger_p0587680",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 49.98,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$49.98"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "eBay - techdealsau",
+                  "url": "https://www.ebay.com.au/itm/407235616016",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 67.11,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$67.11"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Officeworks",
+                  "url": "https://www.officeworks.com.au/shop/officeworks/p/arlec-grid-connect-4-outlet-powerboard-fake",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 54.95,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$54.95"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Desertcart AU",
+                  "url": "https://www.desertcart.com.au/products/fake-arlec",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 41,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$41"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                }
+              ],
+              "variations": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "_fixture": "SYNTHETIC FIXTURE - hand-written test data shaped like a DataForSEO task_get/advanced response. Prices, sellers and URLs are invented; never write them to Payload.",
+  "_scenario": "Harvey Norman price change; BIG W drop of 0.38x -> held; Woolworths unchanged; eBay listing without a price; Ubuy grey-market excluded",
+  "version": "0.1.20250101",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "cost": 0,
+  "tasks_count": 1,
+  "tasks": [
+    {
+      "id": "fixture-727414833638391413",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "cost": 0,
+      "result_count": 1,
+      "data": {
+        "tag": "727414833638391413"
+      },
+      "result": [
+        {
+          "product_id": "727414833638391413",
+          "location_code": 2036,
+          "language_code": "en",
+          "items_count": 1,
+          "items": [
+            {
+              "type": "product_info_element",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "position": "left",
+              "product_id": "727414833638391413",
+              "title": "Millers Falls Portable Power Station 400W",
+              "description": "Synthetic description.",
+              "url": null,
+              "images": [],
+              "features": null,
+              "rating": null,
+              "seller_reviews_count": null,
+              "data_docid": null,
+              "gid": null,
+              "specifications": [
+                {
+                  "type": "shopping_specification",
+                  "block_name": null,
+                  "specification_name": "Brand",
+                  "specification_value": "Millers Falls"
+                }
+              ],
+              "sellers": [
+                {
+                  "type": "product_seller",
+                  "title": "Harvey Norman",
+                  "url": "https://www.harveynorman.com.au/millers-falls-portable-power-station-400w-fake.html",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 379,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$379"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "BIG W",
+                  "url": "https://www.bigw.com.au/product/400w-millers-falls-portable-power-station/p/fake",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 199,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$199"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Woolworths",
+                  "url": "https://www.woolworths.com.au/shop/productdetails/1113539867",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 528.98,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$528.98"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "eBay - powerdeals_au",
+                  "url": "https://www.ebay.com.au/itm/387347176755",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": null,
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Ubuy Australia",
+                  "url": "https://www.ubuy.com.au/product/fake-millers",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 310,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$310"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                }
+              ],
+              "variations": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

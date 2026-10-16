@@ -1,0 +1,92 @@
+{
+  "_fixture": "SYNTHETIC FIXTURE - hand-written test data shaped like a DataForSEO task_get/advanced response. Prices, sellers and URLs are invented; never write them to Payload.",
+  "_scenario": "Offers stored as search URLs get direct URLs and prices; Amazon AU absent from the result -> stale report",
+  "version": "0.1.20250101",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "cost": 0,
+  "tasks_count": 1,
+  "tasks": [
+    {
+      "id": "fixture-13763889469426483691",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "cost": 0,
+      "result_count": 1,
+      "data": {
+        "tag": "13763889469426483691"
+      },
+      "result": [
+        {
+          "product_id": "13763889469426483691",
+          "location_code": 2036,
+          "language_code": "en",
+          "items_count": 1,
+          "items": [
+            {
+              "type": "product_info_element",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "position": "left",
+              "product_id": "13763889469426483691",
+              "title": "Nanoleaf Essentials Matter LED Lightstrip 2m",
+              "description": "Synthetic description.",
+              "url": null,
+              "images": [],
+              "features": null,
+              "rating": null,
+              "seller_reviews_count": null,
+              "data_docid": null,
+              "gid": null,
+              "specifications": [
+                {
+                  "type": "shopping_specification",
+                  "block_name": null,
+                  "specification_name": "Brand",
+                  "specification_value": "Nanoleaf"
+                }
+              ],
+              "sellers": [
+                {
+                  "type": "product_seller",
+                  "title": "JB Hi-Fi",
+                  "url": "https://www.jbhifi.com.au/products/nanoleaf-essentials-matter-lightstrip-2m-starter-kit",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 99,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$99"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Officeworks",
+                  "url": "https://www.officeworks.com.au/shop/officeworks/p/nanoleaf-essentials-matter-lightstrip-2m-nlel2m",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 95,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$95"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                }
+              ],
+              "variations": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+{
+  "_fixture": "SYNTHETIC FIXTURE - hand-written test data shaped like a DataForSEO task_get/advanced response. Prices, sellers and URLs are invented; never write them to Payload.",
+  "_scenario": "Officeworks price change; JB Hi-Fi new retailer; Amazon duplicate listings (lowest kept); AliExpress excluded; Mighty Ape not an AU retailer we list",
+  "version": "0.1.20250101",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "cost": 0,
+  "tasks_count": 1,
+  "tasks": [
+    {
+      "id": "fixture-11530217216584781834",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "cost": 0,
+      "result_count": 1,
+      "data": {
+        "tag": "11530217216584781834"
+      },
+      "result": [
+        {
+          "product_id": "11530217216584781834",
+          "location_code": 2036,
+          "language_code": "en",
+          "items_count": 1,
+          "items": [
+            {
+              "type": "product_info_element",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "position": "left",
+              "product_id": "11530217216584781834",
+              "title": "Aqara Hub M100",
+              "description": "Synthetic description.",
+              "url": null,
+              "images": [],
+              "features": null,
+              "rating": null,
+              "seller_reviews_count": null,
+              "data_docid": null,
+              "gid": null,
+              "specifications": [
+                {
+                  "type": "shopping_specification",
+                  "block_name": null,
+                  "specification_name": "Brand",
+                  "specification_value": "Aqara"
+                },
+                {
+                  "type": "shopping_specification",
+                  "block_name": null,
+                  "specification_name": "Model",
+                  "specification_value": "M100"
+                },
+                {
+                  "type": "shopping_specification",
+                  "block_name": null,
+                  "specification_name": "GTIN",
+                  "specification_value": "6970504219681"
+                }
+              ],
+              "sellers": [
+                {
+                  "type": "product_seller",
+                  "title": "Amazon AU - Amazon.com.au",
+                  "url": "https://www.amazon.com.au/dp/B0FAKE0M10",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 37,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$37"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Amazon AU - Marketplace seller",
+                  "url": "https://www.amazon.com.au/dp/B0FAKE0M11",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 45,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$45"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Officeworks",
+                  "url": "https://www.officeworks.com.au/shop/officeworks/p/aqara-hub-m100-fake",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 35,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$35"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "JB Hi-Fi",
+                  "url": "https://www.jbhifi.com.au/products/aqara-hub-m100-white-fake",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 39,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$39"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "AliExpress",
+                  "url": "https://www.aliexpress.com/item/100500fake.html",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 22,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$22"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Mighty Ape",
+                  "url": "https://www.mightyape.com.au/product/aqara-hub-m100/fake",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 41,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$41"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                }
+              ],
+              "variations": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "_fixture": "SYNTHETIC FIXTURE - hand-written test data shaped like a DataForSEO task_get/advanced response. Prices, sellers and URLs are invented; never write them to Payload.",
+  "_scenario": "Amazon.com rejected by host allow-list; Amazon AU price change; Bunnings unchanged; Costco has no Merchant record; JB Hi-Fi new at 2.6x median -> held",
+  "version": "0.1.20250101",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "cost": 0,
+  "tasks_count": 1,
+  "tasks": [
+    {
+      "id": "fixture-1243904970526806654",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "cost": 0,
+      "result_count": 1,
+      "data": {
+        "tag": "1243904970526806654"
+      },
+      "result": [
+        {
+          "product_id": "1243904970526806654",
+          "location_code": 2036,
+          "language_code": "en",
+          "items_count": 1,
+          "items": [
+            {
+              "type": "product_info_element",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "position": "left",
+              "product_id": "1243904970526806654",
+              "title": "BLUETTI AC2A Portable Power Station",
+              "description": "Synthetic description.",
+              "url": null,
+              "images": [],
+              "features": null,
+              "rating": null,
+              "seller_reviews_count": null,
+              "data_docid": null,
+              "gid": null,
+              "specifications": [
+                {
+                  "type": "shopping_specification",
+                  "block_name": null,
+                  "specification_name": "Brand",
+                  "specification_value": "BLUETTI"
+                }
+              ],
+              "sellers": [
+                {
+                  "type": "product_seller",
+                  "title": "Amazon.com",
+                  "url": "https://www.amazon.com/BLUETTI-AC2A/dp/B0FAKEUS01",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 289,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$289"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Amazon AU",
+                  "url": "https://www.amazon.com.au/BLUETTI-Portable-AC2A/dp/B0FAKEAU01",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 329,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$329"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Bunnings Warehouse",
+                  "url": "https://www.bunnings.com.au/bluetti-ac2a-portable-power-station_p0fake01",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 349,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$349"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Costco Wholesale Australia",
+                  "url": "https://www.costco.com.au/fake/bluetti-ac2a/p/fake",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 339,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$339"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "JB Hi-Fi",
+                  "url": "https://www.jbhifi.com.au/products/bluetti-ac2a-fake",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 899,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$899"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                }
+              ],
+              "variations": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

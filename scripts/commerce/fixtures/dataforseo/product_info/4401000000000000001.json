@@ -1,0 +1,98 @@
+{
+  "_fixture": "SYNTHETIC FIXTURE - hand-written test data shaped like a DataForSEO task_get/advanced response. Prices, sellers and URLs are invented; never write them to Payload.",
+  "_scenario": "New product: 2 AU offers, not in catalogue",
+  "version": "0.1.20250101",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "cost": 0,
+  "tasks_count": 1,
+  "tasks": [
+    {
+      "id": "fixture-4401000000000000001",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "cost": 0,
+      "result_count": 1,
+      "data": {
+        "tag": "4401000000000000001"
+      },
+      "result": [
+        {
+          "product_id": "4401000000000000001",
+          "location_code": 2036,
+          "language_code": "en",
+          "items_count": 1,
+          "items": [
+            {
+              "type": "product_info_element",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "position": "left",
+              "product_id": "4401000000000000001",
+              "title": "Aqara Smart Hub E1 USB Zigbee 3.0",
+              "description": "Synthetic description.",
+              "url": null,
+              "images": [],
+              "features": null,
+              "rating": null,
+              "seller_reviews_count": null,
+              "data_docid": null,
+              "gid": null,
+              "specifications": [
+                {
+                  "type": "shopping_specification",
+                  "block_name": null,
+                  "specification_name": "Brand",
+                  "specification_value": "Aqara"
+                },
+                {
+                  "type": "shopping_specification",
+                  "block_name": null,
+                  "specification_name": "Model",
+                  "specification_value": "HE1-G01"
+                }
+              ],
+              "sellers": [
+                {
+                  "type": "product_seller",
+                  "title": "Amazon AU",
+                  "url": "https://www.amazon.com.au/dp/B0FAKEE101",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 39.95,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$39.95"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                },
+                {
+                  "type": "product_seller",
+                  "title": "Bunnings Warehouse",
+                  "url": "https://www.bunnings.com.au/aqara-smart-hub-e1_p0fake02",
+                  "seller_rating": null,
+                  "seller_review_count": null,
+                  "price": {
+                    "current": 42,
+                    "regular": null,
+                    "max_value": null,
+                    "currency": "AUD",
+                    "is_price_range": false,
+                    "displayed_price": "$42"
+                  },
+                  "delivery_info": null,
+                  "product_availability": "in_stock"
+                }
+              ],
+              "variations": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

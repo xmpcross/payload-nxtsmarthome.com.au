@@ -1,0 +1,18 @@
+{
+  "_fixture": "SYNTHETIC FIXTURES for scripts/commerce/prices.ts --fixture mode. All prices, sellers and pages are invented. --write is refused in fixture mode.",
+  "note": "DataForSEO responses live in dataforseo/<endpoint>/<tag>.json (tag = googleProductId for product_info, slug of the keyword for products). ZenRows pages are mapped below by '<kind>:<Retailer>:<product slug>' so they survive offer URL changes.",
+  "zenrows": {
+    "product:Amazon AU:smartmi-air-purifier-c1": "zenrows/amazon-smartmi-c1.html",
+    "product:JB Hi-Fi:smartmi-air-purifier-c1": "zenrows/jbhifi-smartmi-c1.html",
+    "product:Bunnings:smartmi-air-purifier-c1": "zenrows/bunnings-smartmi-c1.html",
+    "search:Harvey Norman:smartmi-air-purifier-c1": "zenrows/harveynorman-search-smartmi.html",
+    "product:Harvey Norman:smartmi-air-purifier-c1": "zenrows/harveynorman-smartmi-c1.html",
+    "search:The Good Guys:smartmi-air-purifier-c1": "zenrows/thegoodguys-search-smartmi.html",
+    "search:eBay AU:smartmi-air-purifier-c1": "zenrows/ebay-search-smartmi.html",
+    "product:Amazon AU:aqara-hub-m100": "zenrows/amazon-aqara-m100.html",
+    "product:Bunnings:aqara-hub-m100": "zenrows/bunnings-aqara-m100.html",
+    "search:JB Hi-Fi:aqara-hub-m100": "zenrows/jbhifi-search-aqara-m100.html",
+    "product:JB Hi-Fi:aqara-hub-m100": "zenrows/jbhifi-aqara-m100.html",
+    "search:Harvey Norman:aqara-hub-m100": "zenrows/harveynorman-search-empty.html"
+  }
+}
