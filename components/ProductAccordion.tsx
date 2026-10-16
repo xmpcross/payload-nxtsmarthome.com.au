@@ -173,10 +173,7 @@ export default function ProductAccordion({
               prose-sm gives the headings and paragraphs inside it spacing —
               the markup arrives as real HTML, not text.
             */
-            <DescriptionWithFaqs
-              html={product.cmsDescriptionHtml}
-              verdict={product.bestFor ? <Verdict text={product.bestFor} /> : null}
-            />
+            <DescriptionWithFaqs html={product.cmsDescriptionHtml} />
           ) : product.shortDescription && bulletsOf(product.shortDescription).length > 1 ? (
             /* Bulleted copy becomes a real list — as a paragraph the "•"
                characters print as text. */
@@ -209,9 +206,6 @@ export default function ProductAccordion({
             </p>
           )}
 
-          {/* With a CMS description the verdict closes it (DescriptionWithFaqs);
-              without one it closes the panel here. */}
-          {product.bestFor && !product.cmsDescriptionHtml ? <Verdict text={product.bestFor} /> : null}
         </>
       ),
     },
@@ -414,6 +408,9 @@ export default function ProductAccordion({
         );
       })}
 
+      {/* Our verdict sits under the tabs, directly above the FAQs (user request,
+          17 Oct 2026), so it is visible without opening a panel. */}
+      {product.bestFor ? <div className="mt-4"><Verdict text={product.bestFor} /></div> : null}
       <DescriptionFaqs items={descriptionFaqs} />
     </div>
   );
@@ -422,18 +419,17 @@ export default function ProductAccordion({
 /**
  * The CMS description without its "FAQs" section, which ProductAccordion shows
  * under the Additional Info row as an accordion (components/DescriptionFaqs.tsx).
- * Text before and after the FAQ section renders as before, then the verdict.
+ * Text before and after the FAQ section renders as before. The verdict sits
+ * above the FAQs, outside the panels.
  */
 const proseClass =
   'prose prose-sm max-w-none leading-relaxed text-[#55555a] dark:prose-invert dark:text-slate-300';
 
-function DescriptionWithFaqs({ html, verdict }: { html: string; verdict?: React.ReactNode }) {
+function DescriptionWithFaqs({ html }: { html: string }) {
   const { before, after } = splitDescriptionFaqs(html);
   return (
     <>
       <div className={proseClass} dangerouslySetInnerHTML={{ __html: before }} />
-      {/* Verdict closes the description; the FAQs render under Additional Info. */}
-      {verdict}
       {after ? <div className={`${proseClass} mt-6`} dangerouslySetInnerHTML={{ __html: after }} /> : null}
     </>
   );
