@@ -14,6 +14,10 @@
 //   bash run.sh "Best smart locks for renters" --category security --post-type buying-guide
 //   bash run.sh --category lighting --count 5 --publishedAt "2026-11-01 09:00" --publish-every 24
 //   bash run.sh --dry-run --category energy --count 1 --no-images
+//   bash run.sh "Smart lock laws for renters" --category security --author adrian-thompson
+//
+// Byline: --author <slug> names the person who edits and fact-checks the
+// draft. Default: the site editor, Kritin Curtis. Never chosen at random.
 //
 // Categories: security, lighting, energy, entertainment, climate,
 //             hubs-and-platforms, robot-vacuums, setup-guides, buying-guides
@@ -91,7 +95,21 @@ const ARTICLE_LENGTH_TARGETS = {
   long:   { label: 'Long',   words: '1500-2200', min: 1400 },
 };
 
-const AUTHOR_SLUGS = ['adrian-thompson', 'k-curtis', 'harry-cheng'];
+/*
+ * The byline is the person who edits and fact-checks the draft, passed with
+ * --author <slug>; by default the site editor. It used to be picked at random
+ * from three authors, which put names on articles those people never touched
+ * (SEO audit CQ1, Oct 2026). Never randomise it.
+ *
+ * Payload's author records were imported from Strapi, where Kritin Curtis has
+ * the slug `k-curtis`; the site shows that profile at /authors/kritin-curtis/
+ * (AUTHOR_ALIASES in lib/authors.ts). The lookup accepts either slug.
+ */
+const DEFAULT_AUTHOR_SLUG = 'kritin-curtis';
+const AUTHOR_SLUG_ALIASES: Record<string, string[]> = {
+  'kritin-curtis': ['k-curtis'],
+  'k-curtis': ['kritin-curtis'],
+};
 
 // ---------------------------------------------------------------------------
 // CLI
@@ -116,6 +134,7 @@ const argv = yargs(hideBin(process.argv))
   .option('limit',        { type: 'number', describe: 'Max articles to generate (useful with --topics to run a subset)' })
   .option('allow-duplicate', { type: 'boolean', default: false, describe: 'Write even when a near-duplicate article already exists' })
   .option('dry-run',      { type: 'boolean', default: false, describe: 'Generate and print JSON; do not save to the database' })
+  .option('author',       { alias: 'a', type: 'string', default: DEFAULT_AUTHOR_SLUG, describe: 'Byline: slug of the author who edits and fact-checks these drafts' })
   .help()
   .parseSync();
 
@@ -219,13 +238,17 @@ async function loadCatalogue() {
     depth: 0,
     overrideAccess: true,
   });
-  catalogCache = result.docs.filter((p: any) =>
+  const withVerdict = result.docs.filter((p: any) =>
     p.slug && p.name && (
       (typeof p.bestFor === 'string' && p.bestFor.trim()) ||
       (Array.isArray(p.pros) && p.pros.length)
     )
   );
-  console.log(`  catalogue: ${catalogCache.length} products (Payload)`);
+  // CQ5: products named or specified for another market (an EU switch, a US
+  // plug) are never offered to the writer, so no product marker can place them.
+  catalogCache = withVerdict.filter((p: any) => !rules.isNonAuVariant(p));
+  const nonAu = withVerdict.length - catalogCache.length;
+  console.log(`  catalogue: ${catalogCache.length} products (Payload)${nonAu ? `, ${nonAu} non-AU variant(s) excluded` : ''}`);
   return catalogCache;
 }
 
@@ -381,23 +404,25 @@ async function buildInternalLinkContext(category: string, topic: string) {
 // Authors (Payload)
 // ---------------------------------------------------------------------------
 
-let authorIds: number[] | null = null;
+let authorId: number | null = null;
 
-async function pickAuthorId(): Promise<number | null> {
-  if (!authorIds) {
-    const payload = await db();
-    const result = await payload.find({
-      collection: 'authors',
-      where: { slug: { in: AUTHOR_SLUGS } },
-      depth: 0,
-      overrideAccess: true,
-    });
-    authorIds = result.docs.map((a: any) => Number(a.id));
-    const missing = AUTHOR_SLUGS.filter(s => !result.docs.some((a: any) => a.slug === s));
-    if (missing.length) console.warn(`  authors not found in Payload: ${missing.join(', ')}`);
-  }
-  if (!authorIds.length) return null;
-  return authorIds[Math.floor(Math.random() * authorIds.length)];
+/** The one author every article in this run is bylined to (--author). Fails the run if unknown. */
+async function resolveAuthorId(): Promise<number> {
+  if (authorId) return authorId;
+  const wanted = String(argv.author || DEFAULT_AUTHOR_SLUG).trim().toLowerCase();
+  const slugs = [wanted, ...(AUTHOR_SLUG_ALIASES[wanted] ?? [])];
+  const payload = await db();
+  const result = await payload.find({
+    collection: 'authors',
+    where: { slug: { in: slugs } },
+    depth: 0,
+    overrideAccess: true,
+  });
+  const doc: any = result.docs.find((a: any) => a.slug === wanted) ?? result.docs[0];
+  if (!doc) fatal(`--author "${wanted}" is not an author in Payload (tried ${slugs.join(', ')}). Pass the slug of the person who edits and fact-checks these drafts.`);
+  authorId = Number(doc.id);
+  console.log(`Byline: ${doc.name || doc.slug} (${doc.slug})`);
+  return authorId;
 }
 
 // ---------------------------------------------------------------------------
@@ -724,6 +749,9 @@ Image prompt requirements:
   if (post.editorialNotes) { printEditorialNotes(post.editorialNotes); delete post.editorialNotes; }
 
   post.content = rules.canonicaliseInternalLinks(post.content);
+  const linkFix = rules.repairBodyLinks(post.content);
+  post.content = linkFix.text;
+  if (linkFix.repaired.length) console.log(`  links    : repaired ${linkFix.repaired.length} malformed link(s) (${linkFix.repaired.slice(0, 3).join('; ')}${linkFix.repaired.length > 3 ? '; ...' : ''})`);
 
   // Research link verification
   if (research?.searchedUrls) {
@@ -757,6 +785,11 @@ Image prompt requirements:
 
   if (!research) post.rulesIssues = [...(post.rulesIssues ?? []), 'not researched: facts unverified'];
 
+  // Last gate before saving (audit H2/C3): anything repairBodyLinks could not
+  // fix with certainty fails the article outright, draft or not.
+  const linkProblems = rules.bodyLinkProblems([post.content, post.excerpt, ...(post.faq ?? []).map((f: any) => f.answer)].join('\n'));
+  if (linkProblems.length) throw new Error(`malformed links, article not saved:\n    - ${linkProblems.join('\n    - ')}`);
+
   return { post, products };
 }
 
@@ -773,7 +806,7 @@ async function saveToPayload(post: any, {
   coverId: number | null;
   galleryIds: number[];
 }) {
-  const authorId = await pickAuthorId();
+  const authorId = await resolveAuthorId();
   const shouldPublish = argv.publish && !post.productShortfall && !(post.rulesIssues?.length);
   const releaseAt = shouldPublish ? nextReleaseAt() : null;
 
@@ -962,6 +995,9 @@ async function run() {
 
   console.log(`NXT Smart Home article generator`);
   console.log(`AI: ${aiProvider} | model: ${activeModel()} | length: ${argv.length || 'long'} | dry-run: ${argv['dry-run']} | publish: ${argv.publish} | images: ${argv.images}\n`);
+
+  // Resolve the byline before spending anything on generation.
+  if (!argv['dry-run']) await resolveAuthorId();
 
   let jobs = await buildJobs();
 

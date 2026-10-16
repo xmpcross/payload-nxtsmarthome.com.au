@@ -13,6 +13,12 @@
 //   GEO-6  comparison and buying guides without a comparison table
 //   C3     near-duplicate articles splitting one search intent
 //   C10    guides labelled "reviews" on a site that has published none
+// and the 17 October 2026 audit (nxtsmarthome.com.au-audit/findings/):
+//   H2/C3  an article body stored with JSON-escaped hrefs (\"https:/...\") and
+//          legacy /security/ prefixes, which crawled as 404s
+//   CQ2    legal and safety articles with no Sources section
+//   CQ3    titles promising figures or a named programme the body never gives
+//   CQ5    non-AU product variants (EU switch, US plug) placed in articles
 //
 // generate-site-post.js uses this module when site.contentRules is
 // 'nxtsmarthome': the rules go into the prompt, research comes from web
@@ -63,6 +69,25 @@ const OFFICIAL_SOURCE = /https?:\/\/[^\s)]*(?:\.gov\.au|esv\.vic\.gov\.au|oaic\.
 const PRICE = /(?:A?\$|AUD\s?)\s?\d[\d,]*(?:\.\d\d)?\s+(?:at|from)\s+(?:[A-Z][\w&-]*)/;
 const TITLE_BANNED = /!!|\b(?:tested|hands-on|honest|ultimate|best ever|verified|review(?:ed|s)?)\b/i;
 const EDITORIAL_MARKERS = /\[VERIFY|\bTODO\b|\bTBD\b|\blorem\b/i;
+// CQ2: an article whose title or headings are about electrical work, privacy and
+// surveillance, or tenancy needs a Sources section with official or
+// manufacturer pages, not just a passing regulator link.
+const LEGAL_HEADING = /\b(?:electric(?:al|ian)s?|wiring|hard-?wir(?:e|ed|ing)|switchboard|privacy|surveillance|record(?:ing)? (?:audio|neighbours?)|laws?|legal(?:ly)?|landlords?|tenan(?:t|ts|cy)|renters?|rental|strata|lease)\b/i;
+export const SOURCES_MIN_LEGAL = 2;
+// Not sources: this site, and the affiliate retailers and link wrappers.
+const NOT_A_SOURCE = /^https?:\/\/(?:[^/]*\.)?(?:nxtsmarthome\.com\.au|amazon\.com(?:\.au)?|ebay\.com(?:\.au)?|jbhifi\.com\.au|thegoodguys\.com\.au|officeworks\.com\.au|bunnings\.com\.au|harveynorman\.com\.au|binglee\.com\.au|kogan\.com|bigw\.com\.au|geni\.us|amzn\.to)(?:[/:?#]|$)/i;
+// CQ3: a title that promises figures ("Real Numbers", "how much", cost, price,
+// savings) needs figures in the body, and must not be followed by a body that
+// declines to give them.
+const TITLE_FIGURES = /\b(?:real|actual|exact|true)\s+(?:numbers|figures|costs?|prices?|savings)\b|\bhow much\b|\bcosts?\b|\bprices?\b|\bsavings?\b|\bunder \$\d/i;
+const FIGURE = /(?:A?\$|AUD\s?)\s?\d[\d,]*(?:\.\d+)?|\b\d[\d,]*(?:\.\d+)?\s?(?:%|c\/kWh|kWh|cents?\b|watts?\b|W\b)/g;
+export const TITLE_FIGURES_MIN = 3;
+const FIGURE_REFUSAL = /\b(?:won't|will not|can't|cannot|doesn't|does not|don't|do not) (?:quote|give|provide|list|state|publish) (?:any )?(?:specific |exact |precise |single )?(?:dollar )?(?:figures?|numbers?|prices?|amounts?|costs?)\b|\bno (?:reliable|single|exact|precise) (?:single )?(?:[\w-]+ )?(?:figure|number|price|cost)\b|\brather than chasing an exact price\b/i;
+// CQ3: "Home Battery Rebate 2026": a year plus a programme word in the title
+// needs the body to name the actual programme (a capitalised name ending in
+// Program, Scheme, Rebate...), beyond the title's own words.
+const TITLE_PROGRAMME = /\b(?:rebates?|programs?|programmes?|schemes?|grants?|subsid(?:y|ies)|incentives?)\b/i;
+const PROGRAMME_NAME = /\b(?:[A-Z][\w'’-]*\s+){1,6}(?:Program|Programme|Scheme|Rebate|Initiative|Grant|Fund|Incentive)s?\b/g;
 
 export const NXTSMARTHOME_RULES = `# NXT Smart Home editorial rules (site rules + October 2026 SEO audit)
 
@@ -112,12 +137,19 @@ Structure
 - Link 2-4 related NXT Smart Home articles from the internal-link list, with
   descriptive anchor text, where they genuinely help. Use the URLs exactly.
 - End with "## Sources": the official and manufacturer pages from the research
-  notes that the article relies on, as a Markdown list of links.
+  notes that the article relies on, as a Markdown list of links. Electrical,
+  privacy/surveillance and tenancy articles need at least ${SOURCES_MIN_LEGAL} (regulator,
+  OAIC, state tenancy authority, manufacturer); retailers do not count.
+- Links: plain Markdown [text](url) with full canonical URLs. Never escape
+  quotes, never write raw HTML anchors.
 
 Titles and metadata
 - seoTitle at most ${TITLE_MAX} characters, none of "tested",
   "hands-on", "honest", "ultimate", "verified", "review".
 - The title (H1) may be longer, but keep it plain and specific.
+- The title promises only what the body delivers: no "Real Numbers", cost or
+  price title unless the body gives dated, sourced figures; no year plus
+  "rebate" or "program" unless the body names the programme and links it.
 - seoDescription ${META_DESCRIPTION_MIN}-${META_DESCRIPTION_MAX} characters, plain text, describing what the article
   actually covers.
 
@@ -374,6 +406,32 @@ export function checkNxtsmarthomeContent(post, { allowedUrls = null } = {}) {
   if (LEGAL_TOPIC.test(body) && !OFFICIAL_SOURCE.test(body)) {
     issues.push('covers electrical, privacy or tenancy rules but links no official (.gov.au or regulator) source (GEO-1)');
   }
+  const headings = [post.title, post.seoTitle, ...[...body.matchAll(/^#{2,3}\s+(.+)$/gm)].map((m) => m[1])].join('\n');
+  if (LEGAL_HEADING.test(headings)) {
+    const n = sourceLinks(body).length;
+    if (n < SOURCES_MIN_LEGAL) {
+      issues.push(`electrical, privacy or tenancy topic: "## Sources" has ${n} official or manufacturer link(s) (want at least ${SOURCES_MIN_LEGAL}; retailers and this site do not count) (CQ2)`);
+    }
+  }
+
+  // CQ3: titles that promise what the body does not deliver.
+  const titles = `${post.title || ''} ${post.seoTitle || ''}`;
+  if (TITLE_FIGURES.test(titles)) {
+    const figures = new Set(body.replace(/\]\([^)]*\)/g, ']').match(FIGURE) ?? []);
+    const refusal = body.match(FIGURE_REFUSAL);
+    if (refusal) issues.push(`title promises figures ("${titles.match(TITLE_FIGURES)[0]}") but the body declines to give them: "${excerpt(body, refusal.index, refusal[0].length)}" - retitle, or add dated, sourced figures (CQ3)`);
+    else if (figures.size < TITLE_FIGURES_MIN) issues.push(`title promises figures ("${titles.match(TITLE_FIGURES)[0]}") but the body gives ${figures.size} (want at least ${TITLE_FIGURES_MIN} dated, sourced figures, or retitle) (CQ3)`);
+  }
+  const year = titles.match(/\b20\d\d\b/);
+  const programmeWord = titles.match(TITLE_PROGRAMME);
+  if (year && programmeWord) {
+    const titleLower = titles.toLowerCase();
+    const named = [...prose(body).matchAll(PROGRAMME_NAME)]
+      .map((m) => m[0].replace(/^(?:The|A|An|This|That|Our|Your|Each|Every|Any)\s+/, '').trim())
+      .filter((name) => name.split(/\s+/).length >= 2 && !titleLower.includes(name.toLowerCase()));
+    if (!named.length) issues.push(`title pairs ${year[0]} with "${programmeWord[0]}" but the body names no specific programme (e.g. "Cheaper Home Batteries Program"): name it and link its official page, or drop the year (CQ3)`);
+    else if (!OFFICIAL_SOURCE.test(body)) issues.push(`names "${named[0]}" but links no official (.gov.au) page for it (CQ3)`);
+  }
   for (const line of body.split('\n')) {
     if (PRICE.test(line) && !/\]\(https?:/.test(line) && !/^\s*\|/.test(line)) {
       issues.push(`price without a linked source: "${line.trim().slice(0, 90)}"`);
@@ -389,6 +447,80 @@ export function checkNxtsmarthomeContent(post, { allowedUrls = null } = {}) {
   if (/\\n/.test(body)) issues.push('escaped newlines (\\n) in the text');
 
   return issues;
+}
+
+/** Distinct external source links in the "## Sources" section (CQ2). */
+export function sourceLinks(markdown) {
+  const text = String(markdown);
+  const start = text.search(/^##\s+Sources\s*$/im);
+  if (start < 0) return [];
+  const rest = text.slice(start).replace(/^##\s+Sources\s*$/im, '');
+  const end = rest.search(/^#{1,2}\s/m);
+  const section = end >= 0 ? rest.slice(0, end) : rest;
+  const urls = section.match(/https?:\/\/[^\s)\]"'>`]+/g) ?? [];
+  return [...new Set(urls.filter((u) => !NOT_A_SOURCE.test(u)).map(normaliseUrl))];
+}
+
+/*
+ * Link integrity, checked before an article is saved (audit H2/C3, Oct 2026).
+ * door-window-sensors-entry-alerts was stored with <a href=\"https://
+ * nxtsmarthome.com.au/security/...\">: JSON-escaped quotes, so browsers read the
+ * href as a relative \"https:/... path, and the retired /security/ prefix.
+ * Five links crawled as 404s.
+ *
+ * repairBodyLinks() fixes what has exactly one right answer: \" becomes ",
+ * "https:/x" becomes "https://x", and /security/, /energy/, /climate/,
+ * /entertainment/ and /product/ links to a single article or product move to
+ * their canonical URL (next.config.mjs redirects /product/:slug to
+ * /products/:slug/). bodyLinkProblems() then lists anything still malformed;
+ * the writer refuses to save an article with any.
+ */
+const LEGACY_PATH = { ...Object.fromEntries(Object.entries(CATEGORY_URL_SLUG).filter(([k, v]) => k !== v)), product: 'products' };
+const LEGACY_KEYS = Object.keys(LEGACY_PATH).join('|');
+const LEGACY_ABSOLUTE = new RegExp(`https?://(?:www\\.)?nxtsmarthome\\.com\\.au/(${LEGACY_KEYS})/([a-z0-9-]+)/?(#[\\w-]*)?(?![\\w/.-])`, 'gi');
+const LEGACY_RELATIVE = new RegExp(`(\\]\\(|href=["'])/(${LEGACY_KEYS})/([a-z0-9-]+)/?(#[\\w-]*)?(?=[)"'\\s])`, 'gi');
+const LEGACY_ANY = new RegExp(`(?:\\]\\(|href=["']|https?://(?:www\\.)?nxtsmarthome\\.com\\.au)/(?:${LEGACY_KEYS})(?=[/)"'#?\\s]|$)`, 'i');
+const SINGLE_SLASH_SCHEME = /\bhttps?:\/(?!\/)/gi;
+
+function legacyTarget(prefix, slug, hash = '') {
+  return `${SITE_ORIGIN}/${LEGACY_PATH[prefix.toLowerCase()]}/${slug.toLowerCase()}/${hash}`;
+}
+
+export function repairBodyLinks(markdown) {
+  const repaired = [];
+  let text = String(markdown ?? '');
+  const escaped = (text.match(/\\"/g) ?? []).length;
+  if (escaped) {
+    text = text.replace(/\\"/g, '"');
+    repaired.push(`${escaped} escaped quote(s) \\"`);
+  }
+  text = text.replace(SINGLE_SLASH_SCHEME, (m) => {
+    repaired.push(`${m} -> ${m}/`);
+    return `${m}/`;
+  });
+  text = text.replace(LEGACY_ABSOLUTE, (m, prefix, slug, hash) => {
+    const to = legacyTarget(prefix, slug, hash);
+    repaired.push(`${m} -> ${to}`);
+    return to;
+  });
+  text = text.replace(LEGACY_RELATIVE, (m, lead, prefix, slug, hash) => {
+    const to = legacyTarget(prefix, slug, hash);
+    repaired.push(`${m.slice(lead.length)} -> ${to}`);
+    return `${lead}${to}`;
+  });
+  return { text, repaired };
+}
+
+/** Malformed links left in a body; empty means it may be saved. */
+export function bodyLinkProblems(markdown) {
+  const text = String(markdown ?? '');
+  const problems = [];
+  const at = (i) => text.slice(Math.max(0, i - 20), i + 70).replace(/\s+/g, ' ').trim();
+  let m;
+  if ((m = /\\"/.exec(text))) problems.push(`escaped quote (\\") in the body: "${at(m.index)}"`);
+  if ((m = /\bhttps?:\/(?!\/)/i.exec(text))) problems.push(`URL with one slash after the scheme: "${at(m.index)}"`);
+  if ((m = LEGACY_ANY.exec(text))) problems.push(`link to a retired path (/${LEGACY_KEYS.split('|').join('/, /')}/) with no certain canonical URL: "${at(m.index)}" - link the current /<category-slug>/<article>/ or /products/<slug>/ URL`);
+  return problems;
 }
 
 /**
@@ -502,8 +634,16 @@ async function groundingUrls(json) {
  * named for the EU, US or UK market is not offered to the writer.
  */
 const NON_AU_VARIANT = /\b(?:EU|US|UK)\b(?![- ]?(?:compatible|version available))|\b(?:EU|US|UK)[- ]plug\b|\bEuropean version\b|\bUS version\b/;
+// CQ5: the catalogue's "Plug Type" spec, when it names a non-AU plug. Ignored
+// when the name or slug says AU (some AU listings carry scraped US specs).
+const NON_AU_PLUG = /\b(?:EU|US|UK|European|American|British)\s+plug\b|\bType\s+[ABCEFG]\b/i;
+const MARKED_AU = /\b(?:AU|AUS|Australian?)\b|\bAS\/NZS\b/i;
 export function isNonAuVariant(product) {
-  return NON_AU_VARIANT.test(`${product?.name || ''} ${product?.slug ? product.slug.replace(/-/g, ' ').replace(/\b(eu|us|uk)\b/g, (m) => m.toUpperCase()) : ''}`);
+  const label = `${product?.name || ''} ${product?.slug ? product.slug.replace(/-/g, ' ').replace(/\b(eu|us|uk|au)\b/g, (m) => m.toUpperCase()) : ''}`;
+  if (NON_AU_VARIANT.test(label)) return true;
+  if (MARKED_AU.test(label)) return false;
+  const specs = Array.isArray(product?.specifications) ? product.specifications : [];
+  return specs.some((s) => /plug/i.test(String(s?.name || '')) && NON_AU_PLUG.test(String(s?.value || '')) && !MARKED_AU.test(String(s?.value || '')));
 }
 
 /** A "best X" topic is a roundup, whatever post type it was queued with. */

@@ -119,11 +119,32 @@ export interface TopProduct {
   reviewCountOriginal?: number;
 }
 
+/*
+ * Buy buttons only for absolute http(s) retailer URLs. About 45 imported offers
+ * carry Google Shopping tokens as relative `/goto?url=CAES...` paths; the site
+ * has no /goto route, so each rendered a buy button (and an Offer in the
+ * product schema) that 404s (SEO audit, Oct 2026, H1/C2). Dropped here, before
+ * any component or schema sees them, until the offers are re-imported with real
+ * retailer URLs.
+ */
+function isLiveRetailerUrl(url: unknown): boolean {
+  if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return false;
+  try {
+    return Boolean(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
+function liveRetailers<T extends { url: string }>(retailers: T[] | undefined): T[] {
+  return (retailers ?? []).filter((r) => isLiveRetailerUrl(r?.url));
+}
+
 export async function getAllProducts(): Promise<Product[]> {
  return (await catalogue()).filter(p=>p.editorial?.enabled).map(p=>({
   slug:p.slug,name:p.editorial.name||p.name,brand:p.editorial.brand||p.brand,
   ...Object.fromEntries(Object.entries(p.editorial).filter(([,v])=>v!==null)),match:p.editorial.match??[],
-  retailers:withShortLinks<RetailerLink>(p.editorial.retailers??p.retailers),
+  retailers:withShortLinks<RetailerLink>(liveRetailers(p.editorial.retailers??p.retailers)),
  })).sort((a,b)=>a.slug.localeCompare(b.slug));
 }
 
@@ -209,7 +230,7 @@ export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
 export async function getAllTopProducts(): Promise<TopProduct[]> {
  const keepSeeded=process.env.PRODUCTS_KEEP_SEEDED_RATINGS==='1';
  return (await catalogue()).filter(p=>p.catalogueListing!==false).map(raw=>{
-  const product={...raw,retailers:withShortLinks(raw.retailers)};
+  const product={...raw,retailers:withShortLinks(liveRetailers(raw.retailers))};
   return !keepSeeded&&typeof product.ratingReal==='number'
    ? {...product,rating:product.ratingReal,reviewCount:product.reviewCountReal??product.reviewCount}
    : product;
