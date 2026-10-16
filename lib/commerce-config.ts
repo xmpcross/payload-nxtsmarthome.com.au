@@ -8,7 +8,8 @@ const json=(name:string,extra:any={}):Field=>({name,type:'json',...extra})
 const refresh=({doc,req}:any)=>{if(!req.context?.skipRevalidation){try{revalidatePath('/','layout')}catch{/* CLI import has no Next cache context. */}}return doc}
 const hooks={afterChange:[refresh],afterDelete:[refresh]}
 const url=(value:any)=>!value||/^(https?:\/\/|\/)/i.test(value)?true:'Use an https:// URL or a local /path.'
-export const Products:CollectionConfig={slug:'products',admin:{group:'Commerce',useAsTitle:'name',defaultColumns:['name','brand','categoryName','active']},access,hooks,fields:[
+export const Products:CollectionConfig={slug:'products',admin:{group:'Commerce',useAsTitle:'name',defaultColumns:['thumbnail','name','brand','categoryName','active']},access,hooks,fields:[
+ {name:'thumbnail',type:'ui',label:'Image',admin:{disableBulkEdit:true,components:{Cell:'/components/admin/ProductThumbCell#ProductThumbCell'}}},
  text('legacyId',{unique:true,index:true,admin:{readOnly:true}}),text('name',{required:true}),text('slug',{required:true,unique:true,index:true,admin:{description:'Changing this changes the product URL; preserve existing slugs unless you also add a redirect.'}}),text('brand'),
  {name:'active',type:'checkbox',defaultValue:true}, {name:'catalogueListing',type:'checkbox',defaultValue:true,admin:{description:'Include in the main product catalogue. Existing editorial-only products are kept separate.'}},
  text('categoryKey'),text('categorySlug'),text('categoryName'),text('subCategory'),text('bestFor'),text('image',{validate:url}),{name:'imageUpload',type:'upload',relationTo:'media'},
