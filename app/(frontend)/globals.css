@@ -125,13 +125,12 @@
     @apply border-t border-neutral-200 dark:border-neutral-700;
   }
 
-  /* Body text weight 300 site-wide (body and p: the font-body rule further
-     down). User request, 17 Oct 2026. In the base layer so font-* utilities
-     and the heading weight rule still win. strong/b are pinned to 600 because
-     their default, "bolder", only lifts 300 to 400 and emphasis would vanish. */
+  /* Body text weight 400 site-wide (body and p: the font-body rule further
+     down), as in the approved home page design. In the base layer so font-*
+     utilities and the heading weight rule still win. strong/b stay at 600. */
   ul li,
   ol li {
-    font-weight: 300;
+    font-weight: 400;
   }
   strong,
   b {
@@ -1772,15 +1771,15 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 8px !important;
 }
 
-/* Body copy: weight 300 on every page (user request, 17 Oct 2026; list items
-   and strong/b are set alongside the hr rule near the top). In the base layer,
-   so a weight utility on a specific element (font-medium, font-semibold, ...)
-   still wins. */
+/* Body copy: Inter 400 on every page, as in the approved home page design
+   (17 Oct 2026; it replaced an earlier weight of 300). In the base layer, so a
+   weight utility on a specific element (font-medium, font-semibold, ...) still
+   wins. List items and strong/b are set alongside the hr rule near the top. */
 @layer base {
   body,
   p {
     font-family: var(--font-body);
-    font-weight: 300;
+    font-weight: 400;
   }
   /* Card titles wrap their text in a <p> inside the heading: keep the
      heading's weight and font there, not body copy's. */
@@ -1798,6 +1797,8 @@ h1, h2, h3, h4, h5, h6 {
    <p> or link inherit it. */
 :is(h1, h2, h3, h4, h5, h6) {
   font-weight: 700;
+  /* Tight heading tracking from the approved home page design (17 Oct 2026). */
+  letter-spacing: -0.025em;
 }
 
 /* Every page H1 at 2.5rem on all breakpoints. User request, 17 Oct 2026.
