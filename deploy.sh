@@ -23,8 +23,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-UNIT=nxtsmarthome-com-au.service
-PORT=3013
+UNIT=nxtsmarthome-payload.service
+PORT=3022
 PULL=0; ALLOW_DIRTY=0
 for a in "$@"; do
   case "$a" in
@@ -70,6 +70,7 @@ swap_in() {
   rm -rf .next-prev
   [ -d .next ] && mv .next .next-prev
   mv .next-build .next
+  chown -R nxtsmarthome:nxtsmarthome .next
   sudo systemctl start "$UNIT"
 }
 roll_back() {
@@ -77,6 +78,7 @@ roll_back() {
   sudo systemctl stop "$UNIT"
   rm -rf .next-failed; mv .next .next-failed
   mv .next-prev .next
+  chown -R nxtsmarthome:nxtsmarthome .next
   sudo systemctl start "$UNIT"
 }
 

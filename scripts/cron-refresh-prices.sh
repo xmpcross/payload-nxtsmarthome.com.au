@@ -8,9 +8,10 @@
 # (two builds into .next-build wipe each other). Never deploys other uncommitted work.
 # Changes of more than 50% are held back by refresh-prices.mjs and listed in the log.
 set -uo pipefail
+echo "Products now live in Payload. This legacy file-based price job is retired; update Offers in the admin." >&2
+exit 1
 
-APP_DIR="/opt/projects/nxtsmarthome.com.au"
-SOURCING_ENV="/opt/strapi-cms-git/backend/nxt-sourcing/.env.local"
+APP_DIR="/kspellman/sites/nxtsmarthome.com.au/app"
 export PATH="/usr/local/lib/nodejs/current/bin:$PATH"
 log() { echo "$(date -Is) $*"; }
 
@@ -20,15 +21,9 @@ if pgrep -f "$APP_DIR.*(deploy.sh|next build)" >/dev/null || pgrep -f "deploy.sh
   log "a deploy/build is in progress; skipping"; exit 0
 fi
 
-# The stored DataForSEO password is a base64 "login:password" token; the script wants the plain pair.
-PW=$(grep -E '^DATAFORSEO_PASSWORD=' "$SOURCING_ENV" | cut -d= -f2-)
-DEC=$(printf %s "$PW" | base64 -d 2>/dev/null)
-if [[ "$DEC" != *:* ]]; then log "could not read DataForSEO credentials from $SOURCING_ENV"; exit 1; fi
-export DATAFORSEO_LOGIN="${DEC%%:*}" DATAFORSEO_PASSWORD="${DEC#*:}"
-
 cd "$APP_DIR" || exit 1
 log "refreshing prices"
-node scripts/refresh-prices.mjs || { log "refresh failed; nothing deployed"; exit 1; }
+node --env-file=.env.local scripts/refresh-prices.mjs || { log "refresh failed; nothing deployed"; exit 1; }
 
 if git diff --quiet -- public/data/products.json; then
   log "no price changes; not deploying"; exit 0

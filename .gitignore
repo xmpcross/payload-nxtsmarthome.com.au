@@ -28,3 +28,12 @@ public/images/retailers.bak/
 .next-build/
 .next-prev/
 .next-preview/
+
+# Local verification artifacts
+.playwright-cli/
+output/playwright/
+
+.next-*/
+
+# Local media is backed up alongside the application, never committed
+public/uploads

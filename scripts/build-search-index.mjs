@@ -1,3 +1,4 @@
+import { cmsDocuments, closeCMS } from '../lib/cms.ts';
 /**
  * Generates public/search-index.json for the client-side search page.
  * Runs automatically before every build via the `prebuild` npm script.
@@ -55,7 +56,7 @@ function toPlainText(markdown) {
 /** Absolute URL for a Strapi media path (uploads are served by the CMS). */
 function mediaUrl(url) {
   if (!url) return '';
-  return /^https?:\/\//.test(url) ? url : `${STRAPI}${url}`;
+  return url;
 }
 
 function coverUrl(slug) {
@@ -75,13 +76,12 @@ function coverUrl(slug) {
 /*
  * Built from the CMS, not from content/articles/.
  *
- * The site started reading posts from Strapi; this kept reading the markdown,
+ * The site started reading posts from Payload; this kept reading the markdown,
  * so the index silently described a different set of articles than the site
  * served. The first thing published only in the CMS was live on the site and
  * absent from search, with nothing failing to say so.
  */
-const STRAPI = (process.env.STRAPI_URL || 'https://cms.fxnstudio.com').replace(/\/$/, '');
-const TOKEN = process.env.STRAPI_TOKEN || process.env.STRAPI_API_TOKEN || '';
+const STRAPI = (process.env.SITE_URL || 'https://nxtsmarthome.com.au').replace(/\/$/, '');
 
 const params = new URLSearchParams({
   status: 'published',
@@ -97,18 +97,8 @@ const params = new URLSearchParams({
   'filters[$or][1][showFrom][$lte]': new Date().toISOString(),
 });
 
-const res = await fetch(`${STRAPI}/api/nxtsmarthome-posts?${params}`, {
-  headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {},
-});
-
-if (!res.ok) {
-  // Never write an empty index over a good one: search would go quiet with a
-  // successful build and nothing in the log worth noticing.
-  console.error(`[search-index] Strapi returned ${res.status} — refusing to overwrite the index`);
-  process.exit(1);
-}
-
-const rows = (await res.json())?.data ?? [];
+const rows = await cmsDocuments('posts');
+await closeCMS();
 
 /* The CMS relates a post to a category by URL slug; this file keys off the
    category KEY, the same split lib/content.ts bridges. */
@@ -161,10 +151,12 @@ const docs = rows
 
 fs.mkdirSync(path.dirname(outFile), { recursive: true });
 fs.writeFileSync(outFile, JSON.stringify(docs));
-console.log(`[search-index] wrote ${docs.length} documents from Strapi to public/search-index.json`);
+console.log(`[search-index] wrote ${docs.length} documents from Payload to public/search-index.json`);
 if (heldBack.length) {
   console.log(
     `[editorial-guard] search index: ${guardMode() === 'warn' ? 'WARN, still indexed' : 'held back'} ` +
       `${heldBack.length} post(s): ${heldBack.join('; ')}`,
   );
 }
+
+process.exit(0);

@@ -1,17 +1,13 @@
+import { catalogue } from './catalogue';
 /**
  * Shared product library.
  *
- * One file per product in `content/products/`, referenced from articles by slug.
- * Also reads top 50 product feeds from `public/data/products.json`.
+ * Reads products, offers and curated editorial from local Payload/PostgreSQL.
+ * Original JSON and Markdown files are retained only as migration archives.
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import matter from 'gray-matter';
 import type { ProductRef, RetailerLink } from './content';
 import { withShortLinks } from './geniuslink-links';
 
-const PRODUCTS_DIR = path.join(process.cwd(), 'content', 'products');
-const JSON_PRODUCTS_PATH = path.join(process.cwd(), 'public', 'data', 'products.json');
 
 export interface Product extends ProductRef {
   slug: string;
@@ -64,6 +60,7 @@ export interface ProductReview {
 }
 
 export interface TopProduct {
+  editorial?: Partial<Product> & { enabled?: boolean };
   id: string;
   slug: string;
   name: string;
@@ -122,47 +119,12 @@ export interface TopProduct {
   reviewCountOriginal?: number;
 }
 
-function readProduct(filename: string): Product | null {
-  const raw = fs.readFileSync(path.join(PRODUCTS_DIR, filename), 'utf8');
-  const { data, content } = matter(raw);
-  if (!data?.name) return null;
-
-  const slug = filename.replace(/\.mdx?$/, '');
-  const match = Array.isArray(data.match) ? data.match.filter(Boolean) : [];
-
-  return {
-    slug,
-    name: data.name,
-    brand: data.brand,
-    bestFor: data.bestFor,
-    rating: typeof data.rating === 'number' ? data.rating : undefined,
-    pros: Array.isArray(data.pros) ? data.pros : undefined,
-    cons: Array.isArray(data.cons) ? data.cons : undefined,
-    image: data.image,
-    retailers: withShortLinks(Array.isArray(data.retailers) ? (data.retailers as RetailerLink[]) : undefined),
-    match: Array.from(
-      new Set([...match, data.brand ? `${data.brand} ${data.name}` : '', data.name].filter(Boolean)),
-    ),
-    identifiers: data.identifiers ?? undefined,
-    note: content.trim() || undefined,
-  };
-}
-
-let cache: Product[] | null = null;
-
-export function getAllProducts(): Product[] {
-  if (cache) return cache;
-  if (!fs.existsSync(PRODUCTS_DIR)) {
-    cache = [];
-    return cache;
-  }
-  cache = fs
-    .readdirSync(PRODUCTS_DIR)
-    .filter((f) => /\.mdx?$/.test(f))
-    .map(readProduct)
-    .filter((p): p is Product => p !== null)
-    .sort((a, b) => a.slug.localeCompare(b.slug));
-  return cache;
+export async function getAllProducts(): Promise<Product[]> {
+ return (await catalogue()).filter(p=>p.editorial?.enabled).map(p=>({
+  slug:p.slug,name:p.editorial.name||p.name,brand:p.editorial.brand||p.brand,
+  ...Object.fromEntries(Object.entries(p.editorial).filter(([,v])=>v!==null)),match:p.editorial.match??[],
+  retailers:withShortLinks<RetailerLink>(p.editorial.retailers??p.retailers),
+ })).sort((a,b)=>a.slug.localeCompare(b.slug));
 }
 
 /**
@@ -205,11 +167,11 @@ function fromCatalogue(p: TopProduct): Product {
  * On a slug collision the curated file supplies the editorial and the catalogue
  * record the photograph and retailers (see below).
  */
-export function getProductBySlug(slug: string): Product | undefined {
-  const curated = getAllProducts().find((p) => p.slug === slug);
+export async function getProductBySlug(slug: string): Promise<Product | undefined> {
+  const curated = (await getAllProducts()).find((p) => p.slug === slug);
   // An empty listing is not embedded: the box would link to a page with
   // nothing on it (isEmptyListing).
-  const listed = getListableTopProducts().find((p) => p.slug === slug || p.id === slug);
+  const listed = (await getListableTopProducts()).find((p) => p.slug === slug || p.id === slug);
 
   /*
    * A curated file for a catalogue product supplies the editorial (bestFor,
@@ -235,76 +197,34 @@ export function getProductBySlug(slug: string): Product | undefined {
 }
 
 /** The curated file for a slug, if there is one (content/products/<slug>.md). */
-export function getCuratedProduct(slug: string): Product | undefined {
-  return getAllProducts().find((p) => p.slug === slug);
+export async function getCuratedProduct(slug: string): Promise<Product | undefined> {
+  return (await getAllProducts()).find((p) => p.slug === slug);
 }
 
-export function getProductsBySlugs(slugs: string[]): Product[] {
-  return slugs
-    .map((s) => getProductBySlug(s))
+export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
+  return (await Promise.all(slugs.map((s) => getProductBySlug(s))))
     .filter((p): p is Product => p !== undefined);
 }
 
-let topProductsCache: TopProduct[] | null = null;
-
-/** Slugs in data/disabled-products.json: taken off the site but kept in the catalogue file. */
-function disabledSlugs(): Set<string> {
-  try {
-    const raw = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data', 'disabled-products.json'), 'utf8'));
-    return new Set((raw.disabled ?? []).map((d: { slug: string } | string) => (typeof d === 'string' ? d : d.slug)));
-  } catch {
-    return new Set();
-  }
+export async function getAllTopProducts(): Promise<TopProduct[]> {
+ const keepSeeded=process.env.PRODUCTS_KEEP_SEEDED_RATINGS==='1';
+ return (await catalogue()).filter(p=>p.catalogueListing!==false).map(raw=>{
+  const product={...raw,retailers:withShortLinks(raw.retailers)};
+  return !keepSeeded&&typeof product.ratingReal==='number'
+   ? {...product,rating:product.ratingReal,reviewCount:product.reviewCountReal??product.reviewCount}
+   : product;
+ }) as TopProduct[];
 }
 
-export function getAllTopProducts(): TopProduct[] {
-  if (topProductsCache) return topProductsCache;
-  if (!fs.existsSync(JSON_PRODUCTS_PATH)) {
-    topProductsCache = [];
-    return topProductsCache;
-  }
-  try {
-    const raw = fs.readFileSync(JSON_PRODUCTS_PATH, 'utf8');
-    // Disabled products are dropped here, so every listing, the sitemap and the
-    // product route (which 404s on a miss) leave them out.
-    const disabled = disabledSlugs();
-    const parsed = (JSON.parse(raw) as TopProduct[]).filter((p) => !disabled.has(p.slug));
-    /*
-     * Where a genuine aggregate has been imported from the review catalogue,
-     * it wins over the seeded `rating` / `reviewCount`. The seeded values are
-     * synthetic — every one falls between 4.5 and 5.0 — and showing "5.0 from
-     * 1,008 reviews" above six real reviews averaging 4.5 is both incoherent
-     * and an unearned claim under the site's own content rules.
-     *
-     * Set PRODUCTS_KEEP_SEEDED_RATINGS=1 to fall back to the seeded numbers.
-     */
-    const keepSeeded = process.env.PRODUCTS_KEEP_SEEDED_RATINGS === '1';
-    topProductsCache = parsed.map((raw) => {
-      // Non-Amazon retailers get their geni.us short link (lib/geniuslink-links.ts).
-      const product = { ...raw, retailers: withShortLinks(raw.retailers) };
-      return !keepSeeded && typeof product.ratingReal === 'number'
-        ? {
-            ...product,
-            rating: product.ratingReal,
-            reviewCount: product.reviewCountReal ?? product.reviewCount,
-          }
-        : product;
-    });
-  } catch {
-    topProductsCache = [];
-  }
-  return topProductsCache;
-}
-
-export function getTopProductsByCategory(categorySlugOrKey: string): TopProduct[] {
-  const all = getAllTopProducts();
+export async function getTopProductsByCategory(categorySlugOrKey: string): Promise<TopProduct[]> {
+  const all = await getAllTopProducts();
   return all.filter(
     (p) => p.categorySlug === categorySlugOrKey || p.categoryKey === categorySlugOrKey,
   );
 }
 
-export function getTopProductBySlug(slug: string): TopProduct | undefined {
-  const all = getAllTopProducts();
+export async function getTopProductBySlug(slug: string): Promise<TopProduct | undefined> {
+  const all = await getAllTopProducts();
   return all.find((p) => p.slug === slug);
 }
 
@@ -347,7 +267,7 @@ const stripHtml = (html?: string) =>
  * manufacturer description, specifications, retailer data or reviews.
  */
 export function originalWordCount(product: TopProduct): number {
-  const curated = getAllProducts().find((p) => p.slug === product.slug);
+  const curated = product.editorial?.enabled ? product.editorial : undefined;
   const note = (curated?.note ?? '').replace(/<!--[\s\S]*?-->/g, ' ');
   const bestFor = curated?.bestFor || product.bestFor || '';
   const pros = curated?.pros ?? product.pros ?? [];
@@ -360,7 +280,7 @@ export function originalWordCount(product: TopProduct): number {
 
 /** The indexing rule above. */
 export function isIndexableProduct(product: TopProduct): boolean {
-  const curated = getAllProducts().find((p) => p.slug === product.slug);
+  const curated = product.editorial?.enabled ? product.editorial : undefined;
   if (!curated) return false;
   if (!(curated.bestFor || product.bestFor)) return false;
   if ((curated.pros ?? product.pros ?? []).length < 3) return false;
@@ -374,13 +294,13 @@ export function isEmptyListing(product: TopProduct): boolean {
 }
 
 /** Catalogue products whose pages are indexable. */
-export function getIndexableTopProducts(): TopProduct[] {
-  return getAllTopProducts().filter(isIndexableProduct);
+export async function getIndexableTopProducts(): Promise<TopProduct[]> {
+  return (await getAllTopProducts()).filter(isIndexableProduct);
 }
 
 /** Catalogue products that may be listed or linked (not empty listings). */
-export function getListableTopProducts(): TopProduct[] {
-  return getAllTopProducts().filter((p) => !isEmptyListing(p));
+export async function getListableTopProducts(): Promise<TopProduct[]> {
+  return (await getAllTopProducts()).filter((p) => !isEmptyListing(p));
 }
 
 /**
@@ -397,8 +317,8 @@ export function hasOffer(product: TopProduct): boolean {
  * from getListableTopProducts, which also backs inline article product boxes
  * — those still render for a product without a price.
  */
-export function getShoppableTopProducts(): TopProduct[] {
-  return getListableTopProducts().filter(hasOffer);
+export async function getShoppableTopProducts(): Promise<TopProduct[]> {
+  return (await getListableTopProducts()).filter(hasOffer);
 }
 
 /**
@@ -411,6 +331,7 @@ export function getShoppableTopProducts(): TopProduct[] {
  */
 export function toListingCard(p: TopProduct): TopProduct {
   const {
+    editorial: _editorial,
     reviews: _reviews,
     specifications: _specifications,
     description: _description,

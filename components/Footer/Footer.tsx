@@ -1,3 +1,4 @@
+import { getSettings } from '@/lib/site-content'
 import { CustomLink } from '@/data/types'
 import { categories, site } from '@/lib/site'
 import Logo from '@/shared/Logo'
@@ -154,7 +155,8 @@ const linkClass =
  * that operates the site (site.organisation.operator, the same name /about/,
  * /contact/ and /privacy/ use).
  */
-const Footer: React.FC = () => {
+const Footer = async () => {
+  const site = await getSettings()
   const year = new Date().getFullYear()
 
   return (
@@ -164,9 +166,7 @@ const Footer: React.FC = () => {
         <div className="flex max-w-sm flex-col gap-5">
           <Logo size="size-10" alwaysShowWordmark />
           <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-            Independent smart home buying guides and setup help for Australian homes, covering
-            230V wiring, AS/NZS standards, renting, Australian retailers and Australian Consumer
-            Law.
+            {site.footerDescription}
           </p>
           {/* Email only, 18px bold (user request, 24 Sep 2026); the Contact
               page is in the site column below. break-all keeps it inside

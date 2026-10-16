@@ -55,11 +55,11 @@ export default function ProductBox({ product, subId, rank }: Props) {
                 #{rank}
               </span>
             )}
-            <p className="text-lg font-bold text-slate-900 dark:text-white">
+            <p className="text-[1.25rem] font-bold leading-7 text-slate-900 dark:text-white">
               {product.brand ? `${product.brand} ${product.name}` : product.name}
             </p>
             {product.bestFor && (
-              <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">
+              <p className="mt-0.5 text-base leading-[1.625] text-slate-600 dark:text-slate-300">
                 Best for: {product.bestFor}
               </p>
             )}
@@ -72,10 +72,10 @@ export default function ProductBox({ product, subId, rank }: Props) {
         <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
           {product.pros?.length ? (
             <div>
-              <p className="mb-2 text-sm font-semibold text-primary-700 dark:text-primary-400">
+              <p className="mb-2 text-base font-semibold leading-[1.625] text-primary-700 dark:text-primary-400">
                 What we like
               </p>
-              <ul className="space-y-1 text-sm text-slate-700 dark:text-slate-300">
+              <ul className="space-y-1 text-base leading-[1.625] text-slate-700 dark:text-slate-300">
                 {product.pros.map((pro) => (
                   <li key={pro} className="flex gap-2">
                     <span className="text-primary-600" aria-hidden="true">
@@ -90,10 +90,10 @@ export default function ProductBox({ product, subId, rank }: Props) {
 
           {product.cons?.length ? (
             <div>
-              <p className="mb-2 text-sm font-semibold text-rose-700 dark:text-rose-400">
+              <p className="mb-2 text-base font-semibold leading-[1.625] text-rose-700 dark:text-rose-400">
                 Worth knowing
               </p>
-              <ul className="space-y-1 text-sm text-slate-700 dark:text-slate-300">
+              <ul className="space-y-1 text-base leading-[1.625] text-slate-700 dark:text-slate-300">
                 {product.cons.map((con) => (
                   <li key={con} className="flex gap-2">
                     <span className="text-rose-500" aria-hidden="true">

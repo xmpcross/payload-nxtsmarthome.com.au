@@ -1,6 +1,6 @@
 'use client'
 
-import { ThemeContext } from '@/app/theme-provider'
+import { ThemeContext } from '@/app/(frontend)/theme-provider'
 import { TCategory } from '@/data/categories'
 import { useCarouselArrowButtons } from '@/hooks/use-carousel-arrow-buttons'
 import { HeadingWithSubProps } from '@/shared/Heading'

@@ -1,3 +1,5 @@
+> **Migrated to local Payload CMS, 17 October 2026 (Perth).** See [current storage and operations](../README.md). The Strapi instructions below describe the previous setup and are retained as migration history.
+
 # nxtsmarthome.com.au
 
 Smart home blog for the Australian market. A Next.js server (`next start`) with
@@ -522,3 +524,9 @@ Two details in the serving config are load-bearing:
 - The previous site, an orphaned static export with no source, is archived at
   `/opt/backups/nxtsmarthome.com.au/static-export-archive-20260801.tar.gz` if
   any of its content is ever wanted back.
+
+
+## Payload commerce admin (17 October 2026)
+
+Current operations and storage documentation: [project README](../README.md).
+Products, Offers, Merchants, Pages and Site settings are now managed in local Payload/PostgreSQL. The original `public/data/products.json` and curated Markdown files are migration/rollback archives, not the live source. Use `/admin/collections/products/` and `/admin/collections/offers/` for updates. Revenue is intentionally excluded. The legacy file-based price cron remains disabled and guarded.

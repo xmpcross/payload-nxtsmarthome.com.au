@@ -1,5 +1,6 @@
+import { cmsDocuments, closeCMS } from '../lib/cms.ts';
 /**
- * Fetch the header navigation from Strapi into lib/nav-cache.json.
+ * Fetch the header navigation from Payload into lib/nav-cache.json.
  *
  * Runs as part of `prebuild`, alongside the search index and redirect map — the
  * nav is build-time data like everything else here, so it is pulled once before
@@ -18,7 +19,6 @@ import path from 'node:path';
 const ROOT = path.dirname(path.dirname(new URL(import.meta.url).pathname));
 const CACHE = path.join(ROOT, 'lib', 'nav-cache.json');
 const SITE = 'nxtsmarthome.com.au';
-const URL_BASE = (process.env.STRAPI_URL || 'https://cms.fxnstudio.com').replace(/\/$/, '');
 
 const GROUPS = ['products-root', 'product-categories', 'topics', 'guides', 'latest', 'search'];
 
@@ -64,16 +64,8 @@ function keep(reason) {
   process.exit(0);
 }
 
-let json;
-try {
-  const res = await fetch(`${URL_BASE}/api/nxtsmart-menus?${qs}`, {
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) keep(`Strapi returned HTTP ${res.status}`);
-  json = await res.json();
-} catch (err) {
-  keep(`Strapi unreachable (${err.message})`);
-}
+const json = { data: (await cmsDocuments('navigation')).filter(x => x.isActive) };
+await closeCMS();
 
 const rows = (json?.data ?? [])
   .map((d) => ({
@@ -90,6 +82,8 @@ if (!nav) keep(`Strapi returned an incomplete nav (${rows.length} usable rows)`)
 
 fs.writeFileSync(CACHE, `${JSON.stringify(nav, null, 2)}\n`);
 console.log(
-  `[nav] ${rows.length} links from Strapi -> lib/nav-cache.json ` +
+  `[nav] ${rows.length} links from Payload -> lib/nav-cache.json ` +
     `(products:1 categories:${nav.productCategoryNavLinks.length} topics:${nav.topicNavLinks.length} guides:${nav.guideNavLinks.length})`,
 );
+
+process.exit(0);

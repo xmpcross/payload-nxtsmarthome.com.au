@@ -10,7 +10,7 @@ export default function Disclosure({ compact = false }: { compact?: boolean }) {
   if (!AFFILIATE_ENABLED) return null;
   if (compact) {
     return (
-      <p className="text-xs text-slate-500 dark:text-slate-400">
+      <p className="text-[14px] leading-[22px] text-slate-500 dark:text-slate-400">
         We may earn a commission from links on this page.{' '}
         <Link href="/affiliate-disclosure/" className="underline hover:text-brand-600">
           How this works
@@ -21,7 +21,7 @@ export default function Disclosure({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <aside className="my-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
+    <aside className="my-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-[14px] leading-[22px] text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
       <strong className="font-semibold text-slate-800 dark:text-slate-100">Heads up:</strong>{' '}
       when you buy through links on this page we may earn a commission, at no extra cost to
       you. It never changes which products we recommend or what we say about them.{' '}

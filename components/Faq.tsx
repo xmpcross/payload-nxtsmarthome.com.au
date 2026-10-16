@@ -24,7 +24,7 @@ export default function Faq({ items }: { items: FaqItem[] }) {
         {items.map((item) => (
           <details key={item.q} className="group border-b border-neutral-200 dark:border-neutral-700">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-4 marker:content-none [&::-webkit-details-marker]:hidden">
-              <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-neutral-900 dark:text-white">
+              <h3 className="min-w-0 flex-1 text-[1.125rem] font-semibold leading-[1.444] text-neutral-900 lg:text-[1.25rem] lg:leading-7 dark:text-white">
                 {item.q}
               </h3>
               <svg
@@ -41,7 +41,7 @@ export default function Faq({ items }: { items: FaqItem[] }) {
                 <line x1="12" y1="5" x2="12" y2="19" className="group-open:hidden" />
               </svg>
             </summary>
-            <p className="pb-5 pr-10 leading-relaxed text-neutral-600 dark:text-neutral-300">{item.a}</p>
+            <p className="pb-5 pr-10 text-[1.125rem] leading-[1.7] text-neutral-600 dark:text-neutral-300">{item.a}</p>
           </details>
         ))}
       </div>

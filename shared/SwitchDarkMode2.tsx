@@ -1,6 +1,6 @@
 'use client'
 
-import { ThemeContext } from '@/app/theme-provider'
+import { ThemeContext } from '@/app/(frontend)/theme-provider'
 import { Switch } from '@headlessui/react'
 import clsx from 'clsx'
 import React, { useContext } from 'react'

@@ -92,17 +92,25 @@ export default function ArticleBody({ html, products, subId, className, midSlot 
   }
 
   // Ncmaz single-post typography (neutral prose, primary links).
+  // prose-lg is applied at all breakpoints (not just lg:) so body text is
+  // 18px everywhere; CSS in globals.css overrides heading scale and line-heights.
   const PROSE =
-    'prose prose-neutral max-w-none lg:prose-lg prose-headings:scroll-mt-24 prose-headings:font-semibold prose-a:text-primary-600 prose-a:font-medium hover:prose-a:text-primary-700 prose-img:rounded-2xl prose-th:text-left dark:prose-invert dark:prose-a:text-primary-400';
+    'prose prose-lg prose-neutral max-w-none prose-headings:scroll-mt-24 prose-headings:font-semibold prose-a:text-primary-600 prose-a:font-medium hover:prose-a:text-primary-700 prose-img:rounded-2xl prose-th:text-left dark:prose-invert dark:prose-a:text-primary-400';
+
+  // The first prose segment gets a marker class so CSS can target the intro
+  // paragraph (first <p> after the article H1) independently of later segments.
+  const firstHtmlIdx = parts.findIndex((p) => p.type === 'html');
 
   return (
     <div className={className}>
       {parts.map((part, i) => {
         if (part.type === 'html') {
+          const isFirstSegment = i === firstHtmlIdx;
+          const segClass = isFirstSegment ? `${PROSE} article-intro-section` : PROSE;
           if (slotAt && slotAt.index === i) {
             return (
               <div key={`h-${i}`}>
-                <div className={PROSE} dangerouslySetInnerHTML={{ __html: part.value.slice(0, slotAt.offset) }} />
+                <div className={segClass} dangerouslySetInnerHTML={{ __html: part.value.slice(0, slotAt.offset) }} />
                 <div>{midSlot}</div>
                 <div className={PROSE} dangerouslySetInnerHTML={{ __html: part.value.slice(slotAt.offset) }} />
               </div>
@@ -114,7 +122,7 @@ export default function ArticleBody({ html, products, subId, className, midSlot 
               // The article container is 1296px wide, but body copy is capped at a
               // readable measure. Running prose the full width would give ~180
               // characters per line; comfortable reading is roughly 65-80.
-              className={PROSE}
+              className={segClass}
               dangerouslySetInnerHTML={{ __html: part.value }}
             />
           );

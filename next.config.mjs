@@ -1,3 +1,4 @@
+import { withPayload } from '@payloadcms/next/withPayload';
 import fs from 'node:fs';
 
 /** @type {import('next').NextConfig} */
@@ -30,6 +31,7 @@ function adsenseRedirects() {
 }
 
 const nextConfig = {
+  experimental: { cpus: 2 },
   ...(staticExport ? { output: 'export' } : {}),
   // deploy.sh builds into a side directory while the live server keeps running,
   // then swaps it in. Unset, this is the normal .next.
@@ -44,12 +46,9 @@ const nextConfig = {
     // page). Only the static preview export, which has no server, needs raw files.
     unoptimized: staticExport,
     formats: ['image/webp'],
-    remotePatterns: [{ protocol: 'https', hostname: 'cms.fxnstudio.com', pathname: '/uploads/**' }],
+    remotePatterns: [{ protocol: 'https', hostname: 'nxtsmarthome.com.au', pathname: '/uploads/**' }],
     // CMS uploads and covers are content-hashed or versioned (?v=): cache a year.
     minimumCacheTTL: 31536000,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
   ...(staticExport
     ? {}
@@ -67,4 +66,4 @@ const nextConfig = {
       }),
 };
 
-export default nextConfig;
+export default withPayload(nextConfig);

@@ -1,5 +1,6 @@
+import { cmsDocuments, closeCMS } from '../lib/cms.ts';
 /**
- * Fetch author profiles from Strapi into content/authors/.
+ * Fetch author profiles from Payload into content/authors/.
  *
  * Runs as part of `prebuild`, alongside the nav and the search index, for the
  * same reason those do: `output: 'export'` refuses a fetch that is not
@@ -49,29 +50,15 @@ function env(name) {
   return '';
 }
 
-const BASE = env('STRAPI_URL');
+const BASE = env('SITE_URL') || 'https://nxtsmarthome.com.au';
 const TOKEN = env('STRAPI_TOKEN');
 
 /** YAML-safe single-quoted scalar. */
 const q = (v) => `'${String(v ?? '').replace(/'/g, "''")}'`;
 
 async function main() {
-  if (!BASE) {
-    console.log('[authors] STRAPI_URL not set — leaving content/authors/ as it is.');
-    return;
-  }
-
-  const url =
-    `${BASE}/api/nxtsmarthome-authors?status=published` +
-    `&pagination%5BpageSize%5D=100&populate%5Bavatar%5D=true&_build=${Date.now()}`;
-
-  const res = await fetch(url, { headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {} });
-  if (!res.ok) {
-    console.log(`[authors] Strapi returned ${res.status} — leaving content/authors/ as it is.`);
-    return;
-  }
-
-  const rows = (await res.json())?.data ?? [];
+  const rows = await cmsDocuments('authors');
+  await closeCMS();
   fs.mkdirSync(DIR, { recursive: true });
 
   let written = 0;
@@ -84,7 +71,7 @@ async function main() {
     if (a.slug !== cms.slug) fs.rmSync(path.join(DIR, `${cms.slug}.md`), { force: true });
 
     const avatar = a.avatar?.url
-      ? (/^https?:\/\//.test(a.avatar.url) ? a.avatar.url : `${BASE}${a.avatar.url}`)
+      ? a.avatar.url
       : '';
 
     const links = Array.isArray(a.sameAs) && a.sameAs.length
@@ -118,9 +105,9 @@ async function main() {
     written += 1;
   }
 
-  console.log(`[authors] wrote ${written} profile(s) from Strapi.`);
+  console.log(`[authors] wrote ${written} profile(s) from Payload.`);
 }
 
-main().catch((err) => {
+main().then(() => process.exit(0)).catch((err) => {
   console.log(`[authors] ${err.message} — leaving content/authors/ as it is.`);
 });

@@ -27,7 +27,7 @@ const SingleMeta: FC<Props> = ({ className, date, updated, author, readingTime }
       <div className="ms-3">
         <p className="block font-semibold">{author.name}</p>
 
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[14px] leading-[21px]">
           <span>
             Published{' '}
             <LocalDate date={date} options={DAY} />

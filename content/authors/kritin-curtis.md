@@ -3,7 +3,7 @@ name: 'Kritin Curtis'
 slug: 'kritin-curtis'
 role: ''
 initials: ''
-avatar: 'https://cms.fxnstudio.com/uploads/my_Photo_Copy_d906a8ec01.jpg'
+avatar: '/api/media/file/my_Photo_Copy_d906a8ec01.jpg'
 bio: 'Kritin Curtis writes practical smart home guides for NXT Smart Home, with a focus on Australian homes, rental-friendly installs, home networking, security cameras, video doorbells, and everyday automation. His work explains what smart devices actually do in real homes, where they fail, and what Australian buyers should check before choosing hubs, sensors, cameras, locks, plugs or connected appliances.'
 links:
   - label: How we test

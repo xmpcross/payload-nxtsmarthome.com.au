@@ -1,6 +1,6 @@
 'use client'
 
-import { ThemeContext } from '@/app/theme-provider'
+import { ThemeContext } from '@/app/(frontend)/theme-provider'
 import Card10 from '@/components/PostCards/Card10'
 import Card10V2 from '@/components/PostCards/Card10V2'
 import Card11 from '@/components/PostCards/Card11'

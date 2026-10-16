@@ -1,0 +1,11 @@
+User-Agent: *
+Allow: /
+Allow: /api/media/file/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /search/
+Disallow: /preview/
+Disallow: /design-preview/
+Disallow: /cdn-cgi/
+
+Sitemap: https://nxtsmarthome.com.au/sitemap.xml

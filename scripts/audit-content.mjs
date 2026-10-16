@@ -1,3 +1,4 @@
+import { cmsDocuments, closeCMS } from '../lib/cms.ts';
 /**
  * Content audit: every published nxtsmarthome post, with the problems that keep
  * a site from being "valuable content" to a reviewer.
@@ -35,31 +36,8 @@ function env(name) {
   return '';
 }
 
-const BASE = (env('STRAPI_URL') || 'https://cms.fxnstudio.com').replace(/\/$/, '');
-const TOKEN = env('STRAPI_TOKEN') || env('STRAPI_API_TOKEN');
 
-async function fetchPosts() {
-  const rows = [];
-  for (let page = 1; page <= 20; page += 1) {
-    const params = new URLSearchParams({
-      status: 'published',
-      'pagination[page]': String(page),
-      'pagination[pageSize]': '100',
-      'sort[0]': 'publishDate:desc',
-      'populate[categories]': 'true',
-      'populate[author]': 'true',
-      'populate[faq]': 'true',
-    });
-    const res = await fetch(`${BASE}/api/nxtsmarthome-posts?${params}`, {
-      headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {},
-    });
-    if (!res.ok) throw new Error(`Strapi returned ${res.status} for nxtsmarthome-posts`);
-    const json = await res.json();
-    rows.push(...(json.data ?? []).map((r) => r.attributes ?? r));
-    if (page >= (json.meta?.pagination?.pageCount ?? 1)) break;
-  }
-  return rows;
-}
+async function fetchPosts() { const rows = await cmsDocuments('posts', { includeScheduled: true }); await closeCMS(); return rows; }
 
 // --- similarity -------------------------------------------------------------
 
@@ -193,3 +171,5 @@ if (JSON_OUT) {
   for (const p of live.pairs) console.log(`  ${p.a} <> ${p.b}  title=${p.title} body=${p.body}`);
   console.log('\nTotals:', JSON.stringify(report.totals));
 }
+
+process.exit(0);

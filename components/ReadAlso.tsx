@@ -50,7 +50,7 @@ export default function ReadAlso({ items }: { items: Article[] }) {
             </Link>
 
             <div className="min-w-0">
-              <p className="text-base font-bold leading-snug text-slate-900 dark:text-white">
+              <p className="text-[17px] font-bold leading-[24px] text-slate-900 dark:text-white">
                 <Link
                   href={articleHref(article)}
                   className="hover:text-brand-700 dark:hover:text-brand-400"

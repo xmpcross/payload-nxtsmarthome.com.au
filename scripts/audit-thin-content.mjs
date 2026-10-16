@@ -1,3 +1,4 @@
+import { cmsDocuments, closeCMS } from '../lib/cms.ts';
 /**
  * Thin-content audit: every article, product and author page with a verdict,
  * built from source data (Strapi + the repo), not the live site, so it can be
@@ -45,8 +46,6 @@ import { retailerReviews } from '../lib/review-sources.ts';
 
 const ROOT = process.cwd();
 const SITE = 'https://nxtsmarthome.com.au';
-const BASE = (process.env.STRAPI_URL || 'https://cms.fxnstudio.com').replace(/\/$/, '');
-const TOKEN = process.env.STRAPI_TOKEN || process.env.STRAPI_API_TOKEN || '';
 
 const THRESHOLDS = {
   articleBodyWords: 800,
@@ -120,25 +119,7 @@ function jaccard(a, b) {
 
 // --- sources ----------------------------------------------------------------
 
-async function strapiAll(collection, extra) {
-  const rows = [];
-  for (let page = 1; page <= 50; page += 1) {
-    const params = new URLSearchParams({
-      status: 'published',
-      'pagination[page]': String(page),
-      'pagination[pageSize]': '100',
-      ...extra,
-    });
-    const res = await fetch(`${BASE}/api/${collection}?${params}`, {
-      headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {},
-    });
-    if (!res.ok) throw new Error(`Strapi returned ${res.status} for ${collection}`);
-    const json = await res.json();
-    rows.push(...(json.data ?? []).map((r) => r.attributes ?? r));
-    if (page >= (json.meta?.pagination?.pageCount ?? 1)) break;
-  }
-  return rows;
-}
+async function strapiAll(collection, extra) { return cmsDocuments(collection === 'nxtsmarthome-posts' ? 'posts' : 'authors'); }
 
 /** Published posts, same query shape as lib/strapi.ts listPosts (showFrom gate included). */
 function fetchPosts() {
@@ -505,3 +486,6 @@ if (indexableBlocking.length) {
   for (const r of indexableBlocking) console.log(`  ${r.verdict.padEnd(13)} ${r.url}`);
   process.exitCode = 1;
 }
+
+await closeCMS();
+process.exit(0);

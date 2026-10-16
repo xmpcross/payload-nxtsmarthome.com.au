@@ -1,6 +1,6 @@
 'use client'
 
-import { ThemeContext } from '@/app/theme-provider'
+import { ThemeContext } from '@/app/(frontend)/theme-provider'
 import { Moon02Icon, Sun03Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import clsx from 'clsx'

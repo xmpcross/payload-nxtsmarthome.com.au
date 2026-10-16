@@ -24,7 +24,7 @@ const UNOPTIMISED = process.env.NEXT_PUBLIC_IMAGES_UNOPTIMISED === '1';
 function optimisable(src: string): boolean {
   if (UNOPTIMISED || !src || src.startsWith('data:') || /\.svg(\?|$)/i.test(src)) return false;
   if (src.startsWith('/') && !src.startsWith('//')) return true;
-  return src.startsWith('https://cms.fxnstudio.com/uploads/');
+  return src.startsWith('https://nxtsmarthome.com.au/');
 }
 
 // Trailing slash: trailingSlash is on, and /_next/image without it 308-redirects.

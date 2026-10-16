@@ -12,7 +12,7 @@
  * components consuming articles did not have to change.
  */
 
-const BASE = (process.env.STRAPI_URL || 'https://cms.fxnstudio.com').replace(/\/$/, '');
+const BASE = (process.env.SITE_URL || 'https://nxtsmarthome.com.au').replace(/\/$/, '');
 const TOKEN = process.env.STRAPI_TOKEN || process.env.STRAPI_API_TOKEN || '';
 
 /**
@@ -63,7 +63,7 @@ export function articleType(postType?: string): string {
 /** Absolute URL for a Strapi media path, which comes back root-relative. */
 export function mediaUrl(url?: string | null): string {
   if (!url) return '';
-  return /^https?:\/\//.test(url) ? url : `${BASE}${url}`;
+  return url;
 }
 
 /**
@@ -108,37 +108,6 @@ export function publishedCutoff(): string {
 }
 
 export async function listPosts(): Promise<StrapiPost[]> {
-  const params = new URLSearchParams({
-    _build: BUILD_STAMP,
-    status: 'published',
-    'pagination[pageSize]': '200',
-    'sort[0]': 'publishDate:desc',
-    ...(SHOW_SCHEDULED
-      ? {}
-      : {
-          'filters[$or][0][showFrom][$null]': 'true',
-          'filters[$or][1][showFrom][$lte]': publishedCutoff(),
-        }),
-    'populate[categories]': 'true',
-    'populate[author]': 'true',
-    'populate[coverImage]': 'true',
-    'populate[faq]': 'true',
-  });
-
-  const res = await fetch(`${BASE}/api/nxtsmarthome-posts?${params}`, {
-    headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {},
-    // Cacheable, because output: 'export' refuses to build an uncached fetch.
-    // BUILD_STAMP below is what actually guarantees freshness.
-    next: { revalidate: 300 },
-  });
-
-  if (!res.ok) {
-    // Loudly, and without falling back to something that looks like success.
-    // A silent empty list here would publish a site with no articles on it.
-    throw new Error(`Strapi returned ${res.status} for nxtsmarthome-posts`);
-  }
-
-  const json = await res.json();
-  const rows = Array.isArray(json?.data) ? json.data : [];
-  return rows.map((row: Record<string, unknown>) => (row.attributes ?? row) as StrapiPost);
+  const { cmsDocuments } = await import('./cms');
+  return await cmsDocuments('posts', { includeScheduled: SHOW_SCHEDULED }) as unknown as StrapiPost[];
 }

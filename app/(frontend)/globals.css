@@ -1,0 +1,1849 @@
+/* Ncmaz template base (Tailwind 4); primary = the site's brand ramp. */
+@import 'tailwindcss';
+/*
+ * FlyonUI as a plugin, not its prebuilt flyonui.css: that file is 930 KB of
+ * every component at every breakpoint and made the site CSS 1.5 MB. The plugin
+ * emits only the classes the site uses; its JS is scanned so the classes its
+ * interactive components add at runtime are kept.
+ *
+ * Light theme only. The plugin's default adds `dark --prefersdark`, which
+ * applies the dark tokens from the visitor's OS setting, not the site's own
+ * .dark class: a light-mode page on a dark-mode OS got near-white article text
+ * (:root .prose reads --color-base-content). Dark mode is handled by .dark.
+ */
+@plugin "flyonui" {
+  themes: light --default;
+}
+@import 'flyonui/variants.css';
+@source "../node_modules/flyonui/dist/index.js";
+/* Not site code: drafts, reports and design-tool captures. */
+@source not "../drafts";
+@source not "../reports";
+@source not "../.impeccable";
+
+/*
+ * Article text in the dark theme. The site marks dark mode with a .dark class;
+ * dark:prose-invert carries the same weight as prose-neutral and lost to it
+ * once FlyonUI became a plugin (4717df0), so body text rendered dark grey on
+ * the dark ground. This states the inversion explicitly, at higher
+ * specificity, using the typography plugin's own invert colours.
+ */
+.dark .prose {
+  --tw-prose-body: var(--tw-prose-invert-body);
+  --tw-prose-headings: var(--tw-prose-invert-headings);
+  --tw-prose-lead: var(--tw-prose-invert-lead);
+  --tw-prose-links: var(--tw-prose-invert-links);
+  --tw-prose-bold: var(--tw-prose-invert-bold);
+  --tw-prose-counters: var(--tw-prose-invert-counters);
+  --tw-prose-bullets: var(--tw-prose-invert-bullets);
+  --tw-prose-hr: var(--tw-prose-invert-hr);
+  --tw-prose-quotes: var(--tw-prose-invert-quotes);
+  --tw-prose-quote-borders: var(--tw-prose-invert-quote-borders);
+  --tw-prose-captions: var(--tw-prose-invert-captions);
+  --tw-prose-kbd: var(--tw-prose-invert-kbd);
+  --tw-prose-code: var(--tw-prose-invert-code);
+  --tw-prose-pre-code: var(--tw-prose-invert-pre-code);
+  --tw-prose-pre-bg: var(--tw-prose-invert-pre-bg);
+  --tw-prose-th-borders: var(--tw-prose-invert-th-borders);
+  --tw-prose-td-borders: var(--tw-prose-invert-td-borders);
+}
+@plugin "@tailwindcss/typography";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/aspect-ratio";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Site-wide 8px corner radius (user request, 24 Sep 2026). Every rounded-*
+     utility reads one of these; rounded-full (circles, pills) is separate. */
+  --radius-xs: 8px;
+  --radius-sm: 8px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-2xl: 8px;
+  --radius-3xl: 8px;
+  --radius-4xl: 8px;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Logo wordmark (shared/Logo.tsx): Urbanist 700. */
+  --font-logo: var(--font-urbanist), ui-sans-serif, system-ui, sans-serif;
+  --color-primary-50: #f1f0ff;
+  --color-primary-100: #deddff;
+  --color-primary-200: #c6c4ff;
+  --color-primary-300: #aeabff;
+  --color-primary-400: #9895ff;
+  --color-primary-500: #7b77e4;
+  --color-primary-600: #5955d1;
+  --color-primary-700: #514dcc;
+  --color-primary-800: #4440b4;
+  --color-primary-900: #37348f;
+
+  --color-secondary-50: rgb(240, 253, 250);
+  --color-secondary-100: rgb(204, 251, 241);
+  --color-secondary-200: rgb(153, 246, 228);
+  --color-secondary-300: rgb(153, 246, 228);
+  --color-secondary-400: rgb(45, 212, 191);
+  --color-secondary-500: rgb(20, 184, 166);
+  --color-secondary-600: rgb(13, 148, 136);
+  --color-secondary-700: rgb(15, 118, 110);
+  --color-secondary-800: rgb(17, 94, 89);
+  --color-secondary-900: rgb(19, 78, 74);
+
+  --color-neutral-50: rgb(249, 250, 251);
+  --color-neutral-100: rgb(243, 244, 246);
+  --color-neutral-200: rgb(229, 231, 235);
+  --color-neutral-300: rgb(209, 213, 219);
+  --color-neutral-400: rgb(156, 163, 175);
+  --color-neutral-500: rgb(107, 114, 128);
+  --color-neutral-600: rgb(75, 85, 99);
+  --color-neutral-700: rgb(55, 65, 81);
+  --color-neutral-800: rgb(31, 41, 55);
+  --color-neutral-900: rgb(17, 24, 39);
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    @apply border-neutral-200/80 dark:border-neutral-700;
+  }
+
+  button.gm-control-active.gm-fullscreen-control {
+    border-radius: var(--radius-xl) !important;
+  }
+  [type='button'] {
+    -webkit-appearance: none !important;
+  }
+
+  hr {
+    @apply border-t border-neutral-200 dark:border-neutral-700;
+  }
+
+  input[type='time']::-webkit-calendar-picker-indicator {
+    @apply rounded-md dark:bg-neutral-500;
+  }
+}
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1rem;
+  @media screen and (min-width: 1536px) {
+    padding-inline: 8rem;
+  }
+}
+
+@utility pl-container {
+  @apply pl-4 sm:pl-[calc((100vw-40rem+2rem)/2)] md:pl-[calc((100vw-48rem+2rem)/2)] lg:pl-[calc((100vw-64rem+2rem)/2)] xl:pl-[calc((100vw-80rem+2rem)/2)] 2xl:pl-[calc((100vw-96rem+16rem)/2)];
+}
+
+/* embla carousel */
+@utility embla {
+  overflow: hidden;
+}
+@utility embla-overflow-unset {
+  overflow: unset;
+}
+@utility embla__container {
+  display: flex;
+  touch-action: pan-y pinch-zoom;
+}
+@utility embla__slide {
+  flex-shrink: 0;
+  flex-grow: 0;
+  transform: translate3d(0, 0, 0);
+}
+
+/* // CUSTOM STYLES */
+@utility hidden-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* // CARD TITLE */
+/* @utility post-card-title {
+  @apply transition-colors duration-75 hover:text-primary-900 hover:underline dark:hover:text-primary-300;
+} */
+
+/* // Z-MAX */
+@utility z-max {
+  z-index: 99999999;
+}
+
+/* // POST CARD COMMENT BTN */
+.nc-PostCardCommentBtn,
+.nc-PostCardLikeAction,
+.nc-CommentCardLikeReply > button {
+  &:hover {
+    span {
+      color: inherit;
+    }
+  }
+}
+
+/* // ORIGIN */
+@utility origin-100 {
+  transform-origin: 100% 50% 0px;
+}
+@utility origin-50 {
+  transform-origin: 50% 50% 0px;
+}
+
+/* // POST FEATURED MEDIA */
+.nc-PostFeaturedMedia {
+  .glide__bullet--active {
+    @apply bg-white;
+  }
+}
+
+.modalPhotos-single-gallery {
+  .controls_nav {
+    .glide__bullet--active {
+      display: block;
+    }
+  }
+}
+
+@utility nc-animation-spin {
+  animation: myspin 20s linear infinite;
+  animation-play-state: paused;
+  &.playing {
+    animation-play-state: running;
+  }
+}
+@keyframes myspin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+[type='button'] {
+  -webkit-appearance: none !important;
+}
+
+@utility section-rounded-none {
+  *[class*='rounded'],
+  *[class*='nc-box'] {
+    border-radius: 0 !important;
+  }
+}
+
+@utility section-rounded-md {
+  *[class*='rounded'],
+  *[class*='nc-box'] {
+    border-radius: var(--radius-md) !important;
+  }
+}
+
+@utility nc-google-shadow {
+  box-shadow:
+    0px 6px 10px 0px rgb(0 0 0 / 14%),
+    0px 1px 18px 0px rgb(0 0 0 / 12%),
+    0px 3px 5px -1px rgb(0 0 0 / 20%);
+}
+
+.menuIsNew_lv1 {
+  > a::before {
+    content: 'New!';
+    position: absolute;
+    top: -2px;
+    @apply end-0;
+    display: inline-block;
+    padding: 0 5px;
+    line-height: 15px;
+    border-radius: 8px;
+    background-color: #f35656;
+    color: #fff;
+    font-size: 10px;
+    font-weight: normal;
+  }
+}
+.menuIsNew {
+  > a::after {
+    content: 'New!';
+    display: inline-block;
+    padding: 0 5px;
+    line-height: 15px;
+    border-radius: 8px;
+    background-color: #f35656;
+    color: #fff;
+    font-size: 10px;
+    @apply ms-1.5;
+  }
+}
+
+.nc-PostCardCommentBtn,
+.nc-PostCardLikeAction,
+.nc-CommentCardLikeReply > button {
+  &:hover {
+    span {
+      color: inherit;
+    }
+  }
+}
+
+.nc-CardLarge1--hasAnimation {
+  .nc-CardLarge1__left {
+    animation-name: CardLarge1ExampleLeft;
+    animation-duration: 300ms;
+    animation-timing-function: ease-in-out;
+  }
+  .nc-CardLarge1__right {
+    animation-name: CardLarge1ExampleRight;
+    animation-duration: 500ms;
+    animation-timing-function: ease-in-out;
+  }
+}
+
+@keyframes CardLarge1ExampleRight {
+  from {
+    transform: scale(1.05) translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0px);
+    opacity: 1;
+  }
+}
+@keyframes CardLarge1ExampleLeft {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@utility custom-shadow-1 {
+  box-shadow:
+    rgba(17, 17, 26, 0.1) 0px 4px 16px,
+    rgba(17, 17, 26, 0.05) 0px 8px 32px;
+}
+
+/* // MENU MEGAMENU */
+@utility menu-item {
+  @apply flex;
+  &:hover {
+    > .sub-menu {
+      @apply block;
+    }
+  }
+}
+@utility sub-menu {
+  @apply hidden;
+}
+
+
+/* ===== Site styles kept from the previous theme ===== */
+
+
+@theme {
+  --color-card: #222324;
+  --color-card-edge: #313131;
+  --color-bar: #eef0f3;
+  --color-bar-dark: #1d1e20;
+
+  --color-night-50: #151616;
+  --color-night-100: #181818;
+  --color-night-200: #282828;
+  --color-night-300: #343434;
+  --color-night-400: #565656;
+  --color-night-500: #727272;
+  --color-night-600: #9ca3af;
+  --color-night-700: #d1d5db;
+  --color-night-800: #e5e7eb;
+  --color-night-900: #f3f4f6;
+
+  --color-slate-50: #f7f8f9;
+  --color-slate-100: #eaecee;
+  --color-slate-200: #e5e7eb;
+  --color-slate-300: #d1d5db;
+  --color-slate-400: #a7aaaf;
+  --color-slate-500: #75787d;
+  --color-slate-600: #626568;
+  --color-slate-700: #3a3b3d;
+  --color-slate-800: #1a1b1c;
+  --color-slate-900: #0e0e0f;
+  --color-slate-950: #000000;
+
+  --color-brand-50: #f1f0ff;
+  --color-brand-100: #deddff;
+  --color-brand-200: #c6c4ff;
+  --color-brand-300: #aeabff;
+  --color-brand-400: #9895ff;
+  --color-brand-500: #7b77e4;
+  --color-brand-600: #5955d1;
+  --color-brand-700: #514dcc;
+  --color-brand-800: #4440b4;
+  --color-brand-900: #37348f;
+  --color-brand-950: #232159;
+
+  --color-accent-400: #ffb545;
+  --color-accent-500: #ff9b1a;
+  --color-accent-600: #e97c06;
+
+  --font-body: var(--font-sans);
+  --font-heading: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --container-prose: 46rem;
+  --container-site: 81rem;
+}
+
+
+@layer components {
+  /*
+   * Heading anchors added by rehype-autolink-headings wrap the heading text.
+   *
+   * The weight has to be restated: the anchor is an <a> inside the heading, so
+   * prose-a:font-medium (500) applies to it and the heading's own 600 does not
+   * inherit through. Without this the linked headings render a step lighter
+   * than the unlinked ones and the article looks inconsistent for no reason.
+   */
+  .prose h2 > a {
+    @apply no-underline text-inherit;
+    font-weight: 600;
+  }
+  .prose h3 > a {
+    @apply no-underline text-inherit;
+    font-weight: 600;
+  }
+  .prose h4 > a {
+    @apply no-underline text-inherit;
+    font-weight: 600;
+  }
+
+  .prose h2 > a:hover {
+    @apply text-brand-700 dark:text-brand-400;
+  }
+
+  .prose h3 > a:hover {
+    @apply text-brand-700 dark:text-brand-400;
+  }
+
+  /* Outbound links inside article bodies get a subtle affordance. */
+  .prose a[target='_blank']::after {
+    content: ' ↗';
+    @apply text-xs text-slate-400;
+  }
+}
+
+@utility notched-card {
+  /* Tablet: same shapes, a little smaller. */
+
+  /* Mobile: 44px is the minimum comfortable touch target, so the button stops there. */
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+
+  /* Button hangs off the corner: cut-out centred close to it. */
+  --notch-c: var(--notch-card-inset);
+  --notch-r: var(--notch-card-r);
+  -webkit-mask-image: radial-gradient(
+    circle at calc(100% - var(--notch-c)) calc(100% - var(--notch-c)),
+    transparent 0 var(--notch-r),
+    #000 calc(var(--notch-r) + 0.5px)
+  );
+  mask-image: radial-gradient(
+    circle at calc(100% - var(--notch-c)) calc(100% - var(--notch-c)),
+    transparent 0 var(--notch-r),
+    #000 calc(var(--notch-r) + 0.5px)
+  );
+}
+
+@utility notched-image {
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+
+  /* Button sits inside the frame: cut-out centred one radius in. */
+  --notch-c: var(--notch-image-r);
+  --notch-r: var(--notch-image-r);
+  -webkit-mask-image: radial-gradient(
+    circle at calc(100% - var(--notch-c)) calc(100% - var(--notch-c)),
+    transparent 0 var(--notch-r),
+    #000 calc(var(--notch-r) + 0.5px)
+  );
+  mask-image: radial-gradient(
+    circle at calc(100% - var(--notch-c)) calc(100% - var(--notch-c)),
+    transparent 0 var(--notch-r),
+    #000 calc(var(--notch-r) + 0.5px)
+  );
+}
+
+@utility article-image-wrap {
+  /* Wrapper that owns the positioning context for a notched image + its button. */
+  position: relative;
+}
+
+@utility card-arrow {
+  /*
+   * The button. Centred on the cut-out by construction: half its width back from
+   * the notch centre, so it stays concentric at every breakpoint as the custom
+   * properties change.
+   */
+  /* Same surface, ring and ink as the header tiles' arrow, so every detached
+       CTA on the page reads as one control rather than three near-misses. */
+  background: var(--pc-arrow-bg);
+  border: 1px solid var(--pc-arrow-border);
+  color: var(--pc-arrow-ink);
+  display: grid;
+  place-items: center;
+  width: var(--arrow-size);
+  height: var(--arrow-size);
+  border-radius: 8px;
+  transition:
+    transform 200ms ease,
+    background-color 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+
+  /* The detached pair hang in a mask cut-out, so they are positioned against the
+     card or image that owns them. */
+  position: absolute;
+  right: calc(var(--notch-card-inset) - var(--arrow-size) / 2);
+  bottom: calc(var(--notch-card-inset) - var(--arrow-size) / 2);
+
+  & svg {
+    width: var(--arrow-icon);
+    height: var(--arrow-icon);
+  }
+
+  /* Nudge up and to the right, as if following the arrow. */
+  .group:hover & {
+    transform: translate(3px, -3px) rotate(-8deg);
+  }
+  &:hover {
+    transform: translate(3px, -3px) rotate(-8deg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition:
+      background-color 200ms ease,
+      color 200ms ease;
+
+    .group:hover & {
+      transform: none;
+    }
+
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
+@utility image-arrow {
+  /* Same surface, ring and ink as the header tiles' arrow, so every detached
+       CTA on the page reads as one control rather than three near-misses. */
+  background: var(--pc-arrow-bg);
+  border: 1px solid var(--pc-arrow-border);
+  color: var(--pc-arrow-ink);
+  display: grid;
+  place-items: center;
+  width: var(--arrow-size);
+  height: var(--arrow-size);
+  border-radius: 8px;
+  transition:
+    transform 200ms ease,
+    background-color 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+  position: absolute;
+  right: calc(var(--notch-image-r) - var(--arrow-size) / 2);
+  bottom: calc(var(--notch-image-r) - var(--arrow-size) / 2);
+
+  & svg {
+    width: var(--arrow-icon);
+    height: var(--arrow-icon);
+  }
+
+  .group:hover & {
+    transform: translate(3px, -3px) rotate(-8deg);
+  }
+  &:hover {
+    transform: translate(3px, -3px) rotate(-8deg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition:
+      background-color 200ms ease,
+      color 200ms ease;
+
+    .group:hover & {
+      transform: none;
+    }
+
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
+@utility inline-arrow {
+  /* Same surface, ring and ink as the header tiles' arrow, so every detached
+       CTA on the page reads as one control rather than three near-misses. */
+  background: var(--pc-arrow-bg);
+  border: 1px solid var(--pc-arrow-border);
+  color: var(--pc-arrow-ink);
+  display: grid;
+  place-items: center;
+  width: var(--arrow-size);
+  height: var(--arrow-size);
+  border-radius: 8px;
+  transition:
+    transform 200ms ease,
+    background-color 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+
+  /* Same control in normal flow, for a card with no cut-out to hang in. It sits
+     in a flex row, so it must not be squeezed below its touch target. */
+  flex: none;
+
+  & svg {
+    width: var(--arrow-icon);
+    height: var(--arrow-icon);
+  }
+
+  .group:hover & {
+    transform: translate(3px, -3px) rotate(-8deg);
+  }
+  &:hover {
+    transform: translate(3px, -3px) rotate(-8deg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition:
+      background-color 200ms ease,
+      color 200ms ease;
+
+    .group:hover & {
+      transform: none;
+    }
+
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
+@layer components {
+  /* Nudge up and to the right, as if following the arrow. */
+  .group:hover .card-arrow {
+    transform: translate(3px, -3px) rotate(-8deg);
+  }
+  .group:hover .image-arrow {
+    transform: translate(3px, -3px) rotate(-8deg);
+  }
+  .group:hover .inline-arrow {
+    transform: translate(3px, -3px) rotate(-8deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .group:hover .card-arrow {
+      transform: none;
+    }
+
+    .group:hover .image-arrow {
+      transform: none;
+    }
+
+    .group:hover .inline-arrow {
+      transform: none;
+    }
+  }
+}
+
+@layer components {
+  .dark {
+    --post-card-bg: var(--color-card);
+    --post-card-border: var(--color-card-edge);
+    --post-text: #ffffff;
+    --post-muted: rgb(255 255 255 / 0.4);
+    --post-badge-bg: #0d0f0f;
+    --post-badge-fg: #ffffff;
+  }
+
+  .dark {
+    --page-bg: var(--color-night-50);
+    --pc-arrow-bg: var(--color-card);
+    --pc-arrow-border: var(--color-card-edge);
+    --pc-arrow-ink: #ffffff;
+    --cs-light-primary-color-rgb: 0, 0, 0;
+  }
+}
+
+@utility featured-post-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--post-grid-gap);
+  align-items: stretch;
+
+  @media (max-width: 1023px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 699px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@utility compact-post-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--compact-gap) 1.25rem;
+  margin-top: var(--post-grid-gap);
+
+  @media (max-width: 699px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (min-width: 700px) {
+    grid-template-columns: repeat(21, minmax(0, 1fr));
+
+    & > *:nth-child(4n + 1) {
+      grid-column: span 9;
+    }
+
+    & > *:nth-child(4n + 4) {
+      grid-column: span 9;
+    }
+
+    & > *:nth-child(4n + 2) {
+      grid-column: span 12;
+    }
+
+    & > *:nth-child(4n + 3) {
+      grid-column: span 12;
+    }
+  }
+}
+
+@utility featured-post-card {
+  /* ---- large card ---- */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--post-card-pad);
+  /* Room at the foot so the detached arrow never sits over the excerpt. */
+  padding-bottom: calc(var(--post-card-pad) + 1.25rem);
+  background: var(--post-card-bg);
+  border: 1px solid var(--post-card-border);
+  border-radius: var(--post-card-radius);
+}
+
+@utility featured-post-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+@utility featured-post-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+@utility post-badge {
+  display: inline-block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: var(--post-badge-bg);
+  color: var(--post-badge-fg);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@utility post-dot {
+  color: var(--post-muted);
+}
+
+@utility post-muted {
+  color: var(--post-muted);
+  font-size: 0.75rem;
+}
+
+@utility bookmark-btn {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.625rem;
+  height: 1.625rem;
+  border: 1px solid var(--post-card-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--post-muted);
+  transition:
+    color 200ms ease,
+    border-color 200ms ease;
+
+  & svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  &:hover {
+    color: var(--post-text);
+    border-color: var(--post-text);
+  }
+
+  &[aria-pressed='true'] {
+    color: var(--post-text);
+    border-color: var(--post-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 3px;
+  }
+}
+
+@utility compact-post-link {
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 3px;
+  }
+  display: flex;
+  align-items: center;
+  gap: 0.9375rem;
+  min-height: var(--compact-min-h);
+  padding: 0.75rem;
+  border-radius: inherit;
+}
+
+@utility featured-post-title {
+  & a:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 3px;
+  }
+
+  /*
+   * Fixed title box. Without it the three cards' images start at different
+   * heights whenever one headline wraps to a third line.
+   */
+  margin-top: 1rem;
+  min-height: 2.75rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--post-text);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+
+  & a:hover {
+    color: var(--color-brand-600);
+  }
+}
+
+@utility featured-post-figure {
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 3px;
+  }
+  display: block;
+  margin-top: 1rem;
+  border-radius: var(--post-image-radius);
+  overflow: hidden;
+
+  & img {
+    display: block;
+    width: 100%;
+    height: var(--post-image-h);
+    object-fit: cover;
+    object-position: left center;
+    border-radius: var(--post-image-radius);
+  }
+}
+
+@utility featured-post-excerpt {
+  margin-top: 1rem;
+  /* Clear of the arrow's corner. */
+  padding-right: 3.25rem;
+  color: var(--post-muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+@utility post-arrow {
+  background: var(--post-card-bg);
+  border: 1px solid var(--post-card-border);
+  color: var(--post-text);
+
+  &:hover {
+    background: var(--color-brand-600);
+    border-color: var(--color-brand-600);
+    color: #ffffff;
+  }
+}
+
+@utility compact-post-card {
+  /* ---- compact card ---- */
+  background: var(--post-card-bg);
+  border: 1px solid var(--post-card-border);
+  border-radius: var(--compact-radius);
+  transition:
+    border-color 200ms ease,
+    transform 200ms ease;
+
+  &:hover {
+    border-color: var(--post-muted);
+    transform: translateY(-2px);
+  }
+
+  &:hover .compact-post-title {
+    color: var(--color-brand-600);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: border-color 200ms ease;
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
+@utility compact-post-thumb {
+  flex-shrink: 0;
+  width: var(--compact-thumb);
+  height: var(--compact-thumb);
+  object-fit: cover;
+  object-position: left center;
+  border-radius: 8px;
+  display: block;
+}
+
+@utility compact-post-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+@utility compact-post-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--post-text);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+
+  .compact-post-card:hover & {
+    color: var(--color-brand-600);
+  }
+}
+
+@utility compact-post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--post-muted);
+  font-size: 0.6875rem;
+}
+
+/*
+ * Compact cards alternate width row by row, as in the reference: narrow-wide,
+ * then wide-narrow, then narrow-wide again.
+ *
+ * CSS grid cannot vary column widths per row, so the row is laid out on a
+ * 21-column track and each card spans either 9 or 12 of them (43% / 57%). The
+ * pattern repeats every four cards, which is what produces the two-row swap.
+ */
+
+@utility articles-grid {
+  /*
+   * Card lift on /articles.
+   *
+   * Scoped to that page rather than put on ArticleCard itself, because the same
+   * component also renders on the category, author and search listings — styling
+   * the component would have changed all of them, which is more than was asked
+   * for. Promoting this site-wide later is a one-line move: drop the wrapper and
+   * apply it in the component.
+   *
+   * The card's own hover:shadow-lg still wins on hover, since Tailwind's
+   * utilities layer is emitted after components — so this is the resting state
+   * and the hover lift is unaffected.
+   */
+  & > article {
+    box-shadow: 0 8px 32px 0 rgba(var(--cs-light-primary-color-rgb), 0.07);
+  }
+}
+
+@utility category-block {
+  /*
+   * Wraps a category row's featured cards and its compact list in one bordered
+   * group. The cards inside keep their own surface; this is the container that
+   * makes the two halves read as a single section.
+   */
+  padding: 0;
+  border: 0;
+  background: transparent;
+
+  @media (max-width: 699px) {
+    padding: 0;
+  }
+}
+
+/*
+ * Article body typography
+ * =======================
+ * Scoped to #article-body .prose to avoid affecting product-catalogue pages that
+ * also use .prose (ProductAccordion / ProductEditorial use prose-sm).
+ *
+ * ArticleBody.tsx applies prose-lg at all breakpoints (not just lg:), giving an
+ * 18px base. The rules below set the full scale: sizes, line-heights, margins.
+ * Base values are mobile / tablet (≤1023px); desktop overrides follow at lg+.
+ *
+ * All font-weight values are 600 here; the unlayered :is(h1…h6) { font-weight:700 }
+ * rule later in this file wins in the cascade and promotes every heading to 700.
+ */
+@layer components {
+  #article-body .prose {
+    /* Body paragraphs: 18 / 30.6 (line-height 1.7) on all breakpoints. */
+    p {
+      font-size: 1.125rem;
+      line-height: 1.7;
+      margin-bottom: 1.375rem; /* ~22px */
+    }
+
+    /* Lists: same measure as body text; 8px gap between items. */
+    ul, ol {
+      font-size: 1.125rem;
+      line-height: 1.7;
+    }
+    li {
+      line-height: 1.7;
+      margin-bottom: 0.5rem; /* 8px */
+    }
+    /* Nested lists: tighter gap. */
+    li > ul,
+    li > ol {
+      margin-top: 0.25rem;
+      margin-bottom: 0.25rem;
+    }
+
+    /* H2: mobile/tablet 26 / 34; desktop 30 / 39. */
+    h2 {
+      font-size: 1.625rem; /* 26px */
+      line-height: 1.308;  /* 34 / 26 */
+      margin-top: 2.5rem;  /* 40px */
+      margin-bottom: 1rem; /* 16px */
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+
+    /* H3: mobile/tablet 22 / 30; desktop 24 / 32. */
+    h3 {
+      font-size: 1.375rem; /* 22px */
+      line-height: 1.364;  /* 30 / 22 */
+      margin-top: 2rem;    /* 32px */
+      margin-bottom: 0.75rem; /* 12px */
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+
+    /* H4: 20 / 28 on all breakpoints. */
+    h4 {
+      font-size: 1.25rem;     /* 20px */
+      line-height: 1.4;       /* 28 / 20 */
+      margin-top: 1.5rem;     /* 24px */
+      margin-bottom: 0.625rem; /* 10px */
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+
+    /* H5 / H6 unchanged from previous theme. */
+    h5 {
+      font-size: 1.125rem; /* 18px */
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+    h6 {
+      font-size: 1rem; /* 16px */
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+
+    /* Image captions: 14 / 21 on all breakpoints. */
+    figcaption {
+      font-size: 0.875rem; /* 14px */
+      line-height: 1.5;    /* 21 / 14 */
+    }
+
+    /* No excess top margin on the first heading in any component. */
+    > :first-child { margin-top: 0; }
+  }
+
+  /* Desktop (≥1024px): scale up H2 and H3. */
+  @media (min-width: 1024px) {
+    #article-body .prose {
+      h2 {
+        font-size: 1.875rem; /* 30px */
+        line-height: 1.3;    /* 39 / 30 */
+      }
+      h3 {
+        font-size: 1.5rem;   /* 24px */
+        line-height: 1.333;  /* 32 / 24 */
+      }
+    }
+  }
+
+  /*
+   * Introduction paragraph: the first <p> of the first prose segment.
+   * ArticleBody.tsx marks the first segment with .article-intro-section.
+   * Mobile: 18 / 29; desktop: 20 / 32.
+   */
+  #article-body .article-intro-section > p:first-child {
+    font-size: 1.125rem; /* 18px */
+    line-height: 1.611;  /* 29 / 18 */
+  }
+
+  @media (min-width: 1024px) {
+    #article-body .article-intro-section > p:first-child {
+      font-size: 1.25rem; /* 20px */
+      line-height: 1.6;   /* 32 / 20 */
+    }
+  }
+
+  /*
+   * Related-story card titles rendered by Card7 inside the single-post
+   * related-posts section. Scoped to .single-post-page so it does not affect
+   * Card7 on the homepage or listing pages.
+   */
+  .single-post-page .post-card-7 h2 {
+    font-size: 1.0625rem; /* 17px */
+    line-height: 1.412;   /* 24 / 17 */
+  }
+}
+
+/*
+ * Notched cards
+ * =============
+ * A rounded card or image with a concave cut-out in its bottom-right corner, and
+ * a circular arrow button sitting in that cut-out so it reads as detached.
+ *
+ * The concavity is a real mask, not a pseudo-element patch painted in the page
+ * colour: a patch has to know the background behind it, which breaks the moment
+ * the card sits on a different surface or the theme changes. A radial-gradient
+ * mask removes the pixels, so whatever is behind shows through — page, section
+ * tint or image alike.
+ *
+ * Every dimension is a custom property, so the shapes retune from one place and
+ * shrink at narrow widths without touching a single component.
+ */
+@layer components {
+  :root {
+    /* Cut-out radius. Diameter lands in the 58-68px band for cards, 54-62px for images. */
+    --notch-card-r: 2rem; /* 32px -> 64px across */
+    --notch-image-r: 1.875rem; /* 30px -> 60px across */
+    /* Distance of the cut-out centre from the card's corner. Small on the text
+       card so the button hangs outside it; equal to the radius on images so the
+       button stays within the frame and off the artwork. */
+    --notch-card-inset: 0.625rem;
+    --arrow-size: 3rem; /* 48px */
+    --arrow-icon: 1.125rem;
+  }
+  @media (max-width: 1024px) {
+    :root {
+      --notch-card-r: 1.75rem;
+      --notch-image-r: 1.625rem;
+      --arrow-size: 2.875rem;
+    }
+  }
+  @media (max-width: 640px) {
+    :root {
+      --notch-card-r: 1.625rem;
+      --notch-image-r: 1.5rem;
+      --arrow-size: 2.75rem; /* 44px */
+    }
+  }
+}
+
+/*
+ * Editorial post cards
+ * ====================
+ * Three large featured cards over six compact ones. Every dimension is a custom
+ * property so the whole set retunes from one place and no card carries its own
+ * geometry — a new article renders identically without touching styles.
+ *
+ * Surfaces reuse the site's existing dark tokens rather than introducing a second
+ * near-identical set: #151616 page, #222324 card, #313131 border. The reference
+ * suggested #121414 / #202222 / rgba(255,255,255,.09), which are the same values
+ * to within a couple of points; sharing tokens keeps this section consistent with
+ * the rest of the page.
+ */
+@layer components {
+  :root {
+    --post-card-bg: #ffffff;
+    --post-card-border: var(--color-slate-200);
+    --post-text: var(--color-slate-900);
+    --post-muted: var(--color-slate-500);
+    --post-badge-bg: var(--color-slate-900);
+    --post-badge-fg: #ffffff;
+
+    --post-card-radius: 0.5rem; /* 8px */
+    --post-card-pad: 1.5rem; /* 24px */
+    --post-image-h: 10.3125rem; /* 165px */
+    --post-image-radius: 0.5rem; /* 8px */
+    --post-grid-gap: 1.25rem; /* 20px */
+    --compact-gap: 1.125rem; /* 18px */
+    --compact-radius: 0.5rem; /* 8px */
+    --compact-thumb: 5.375rem; /* 86px */
+    --compact-min-h: 6.875rem; /* 110px */
+  }
+
+  @media (max-width: 699px) {
+    :root {
+      --post-card-pad: 1.125rem;
+      --compact-thumb: 4.75rem;
+    }
+  }
+}
+
+/*
+ * Shared surface tokens
+ * =====================
+ * --page-bg backs .category-block; the --pc-arrow-* trio is the shared skin for
+ * the detached circular CTAs (.card-arrow / .image-arrow / .inline-arrow).
+ *
+ * The hero's right-column tile styles that used to live here now live in
+ * app/magzin-post-cards.css, scoped to .magzin-style-card.
+ */
+@layer components {
+  :root {
+    --page-bg: #f5f6f7;
+    --pc-arrow-bg: #ffffff;
+    --pc-arrow-border: #d9d9d9;
+    --pc-arrow-ink: #111111;
+    /*
+     * Defined here because the card shadow below is written against it, and it did
+     * not exist in this codebase — it comes from a theme that ships a --cs-* token
+     * set. Left undefined, rgba(var(--cs-light-primary-color-rgb), .07) is simply
+     * an invalid colour and the shadow does not render at all, silently.
+     *
+     * Comma-separated, because the shadow uses the legacy rgba(r, g, b, a) form.
+     * The value is brand-950, so the shadow reads as a tinted lift rather than
+     * flat grey. Dark mode drops to black: a 7% navy shadow over the #151616
+     * surface is invisible, and a lighter tint would glow rather than recede.
+     */
+    --cs-light-primary-color-rgb: 35, 33, 89;
+  }
+}
+
+
+
+.card-corner {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 48px;
+  height: 48px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.card-corner .arrow-box {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  pointer-events: auto;
+  transition: all 0.2s ease;
+}
+
+.dark .card-corner .arrow-box,
+:root.dark .card-corner .arrow-box {
+  background: #334155;
+  border-color: #475569;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.card-corner .arrow-box:hover {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.dark .card-corner .arrow-box:hover,
+:root.dark .card-corner .arrow-box:hover {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #ffffff;
+}
+
+.card-corner .curve-one, .card-corner .curve-two { position: absolute; width: 20px; height: 20px; pointer-events: none; border-bottom-right-radius: 20px; box-shadow: none; }
+
+.dark .card-corner .curve-one, .dark .card-corner .curve-two { box-shadow: none; }
+
+.card-corner .curve-one {
+  right: 0;
+  top: -20px;
+}
+
+.card-corner .curve-two {
+  left: -20px;
+  bottom: 0;
+}
+
+
+.buying-guides-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 24px 24px 64px 24px;
+
+  /* Explicit page surface color variables for notch shadow clipping */
+  --page-surface: #f8fafc;
+}
+
+:root.dark .buying-guides-card,
+.dark .buying-guides-card {
+  background: #1e2025;
+  border-color: #2d3139;
+  --page-surface: #0f172a;
+}
+
+.buying-guides-card .corner-wrapper {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 52px;
+  height: 52px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.buying-guides-card .corner-arrow {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  pointer-events: auto;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+:root.dark .buying-guides-card .corner-arrow,
+.dark .buying-guides-card .corner-arrow {
+  background: #2a2e37;
+  border-color: #383e4a;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.buying-guides-card .corner-arrow:hover {
+  background: #0f172a;
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+:root.dark .buying-guides-card .corner-arrow:hover,
+.dark .buying-guides-card .corner-arrow:hover {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.buying-guides-card .curve-top,
+.buying-guides-card .curve-left {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+  border-bottom-right-radius: 20px;
+  box-shadow: 8px 8px 0 8px var(--page-surface);
+}
+
+.buying-guides-card .curve-top {
+  right: 0;
+  top: -20px;
+}
+
+.buying-guides-card .curve-left {
+  left: -20px;
+  bottom: 0;
+}
+
+
+/* Floating Circular Arrow Button in the Cut-out Notch */
+.buying-guides-section .buying-guides-card .buying-guides-arrow {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: var(--action-size);
+  height: var(--action-size);
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+  transition: transform 200ms ease, background-color 200ms ease, border-color 200ms ease;
+}
+
+:root.dark .buying-guides-section .buying-guides-card .buying-guides-arrow,
+.dark .buying-guides-section .buying-guides-card .buying-guides-arrow {
+  background: #2a2e37;
+  border-color: #383e4a;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.buying-guides-section .buying-guides-card .buying-guides-arrow:hover {
+  background: #0f172a;
+  color: #ffffff;
+  transform: translateX(3px);
+}
+
+:root.dark .buying-guides-section .buying-guides-card .buying-guides-arrow:hover,
+.dark .buying-guides-section .buying-guides-card .buying-guides-arrow:hover {
+  background: #ffffff;
+  color: #0f172a;
+  transform: translateX(3px);
+}
+
+.buying-guides-section .buying-guides-card .buying-guides-arrow:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+/* Rounded Cut-out Notch Container */
+.buying-guides-section .buying-guides-card .buying-guides-notch {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: var(--notch-size);
+  height: var(--notch-size);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Concave Curves */
+.buying-guides-section .buying-guides-card .buying-guides-notch .curve-top,
+.buying-guides-section .buying-guides-card .buying-guides-notch .curve-left {
+  position: absolute;
+  width: var(--notch-radius);
+  height: var(--notch-radius);
+  pointer-events: none;
+  border-bottom-right-radius: var(--notch-radius);
+  box-shadow: 8px 8px 0 8px var(--page-surface);
+}
+
+.buying-guides-section .buying-guides-card .buying-guides-notch .curve-top {
+  right: 0;
+  top: -20px;
+}
+
+.buying-guides-section .buying-guides-card .buying-guides-notch .curve-left {
+  left: -20px;
+  bottom: 0;
+}
+
+/* Circular Arrow Button */
+.buying-guides-section .buying-guides-card .buying-guides-arrow {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: var(--action-size);
+  height: var(--action-size);
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+  transition: transform 200ms ease, background-color 200ms ease, border-color 200ms ease;
+}
+
+:root.dark .buying-guides-section .buying-guides-card .buying-guides-arrow,
+.dark .buying-guides-section .buying-guides-card .buying-guides-arrow {
+  background: #2a2e37;
+  border-color: #383e4a;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.buying-guides-section .buying-guides-card .buying-guides-arrow:hover {
+  background: #0f172a;
+  color: #ffffff;
+  transform: translateX(3px);
+}
+
+:root.dark .buying-guides-section .buying-guides-card .buying-guides-arrow:hover,
+.dark .buying-guides-section .buying-guides-card .buying-guides-arrow:hover {
+  background: #ffffff;
+  color: #0f172a;
+  transform: translateX(3px);
+}
+
+.buying-guides-section .buying-guides-card .buying-guides-arrow:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .buying-guides-section .buying-guides-card {
+    --action-size: 42px;
+    --notch-size: 58px;
+    padding-bottom: 64px;
+  }
+}
+
+/* Staff Picks card — rounded bottom-right arrow notch */
+.staff-picks-section .staff-picks-card {
+  --card-radius: 8px;
+  --action-size: 48px;
+  --notch-size: 64px;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: var(--card-radius);
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 24px 24px 72px 24px;
+  overflow: visible;
+
+  /* Radial gradient mask cutting out bottom-right corner */
+  -webkit-mask-image: radial-gradient(circle 32px at 100% 100%, transparent 32px, #000 32.5px);
+  mask-image: radial-gradient(circle 32px at 100% 100%, transparent 32px, #000 32.5px);
+}
+
+:root.dark .staff-picks-section .staff-picks-card,
+.dark .staff-picks-section .staff-picks-card {
+  background: #1e2025;
+  border-color: #2d3139;
+}
+
+/* Floating Circular Arrow Button */
+.staff-picks-section .staff-picks-card .staff-picks-arrow {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: var(--action-size);
+  height: var(--action-size);
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+  transition: transform 200ms ease, background-color 200ms ease, border-color 200ms ease;
+}
+
+:root.dark .staff-picks-section .staff-picks-card .staff-picks-arrow,
+.dark .staff-picks-section .staff-picks-card .staff-picks-arrow {
+  background: #2a2e37;
+  border-color: #383e4a;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.staff-picks-section .staff-picks-card .staff-picks-arrow:hover {
+  background: #0f172a;
+  color: #ffffff;
+  transform: translateX(3px);
+}
+
+:root.dark .staff-picks-section .staff-picks-card .staff-picks-arrow:hover,
+.dark .staff-picks-section .staff-picks-card .staff-picks-arrow:hover {
+  background: #ffffff;
+  color: #0f172a;
+  transform: translateX(3px);
+}
+
+/* Article inline image height setting for renter smart home guide */
+.prose img[src*="renter-smart-home-devices-no-drilling-inline"] {
+  height: 450px !important;
+  max-height: 450px !important;
+  object-fit: cover !important;
+  width: 100% !important;
+  border-radius: 8px !important;
+}
+
+.prose img[src*="overseas-smart-home-devices-australia-inline"],
+.prose img[src*="second-hand-smart-home-devices-australia-inline"] {
+  height: 450px !important;
+  max-height: 450px !important;
+  object-fit: cover !important;
+  width: 100% !important;
+  border-radius: 8px !important;
+}
+/*
+  Section-title sparkle
+  ---------------------------------------------------------------------------
+  The twinkle beside a section heading. It began in components/staff-picks.css
+  as sp-sparkle, applying only to Buying Guides; Latest, Hubs & Platforms and
+  Recommended had the same icon sitting still beside it.
+
+  Defined here, once, rather than copied into three more stylesheets — four
+  copies of a keyframe list is four chances for them to drift out of step, and
+  the point of the request was that they match.
+
+  Slow and small on purpose: it sits beside a heading, and anything faster or
+  wider reads as a loading spinner. It scales and fades on the same curve, with
+  a long hold at rest between pulses so the eye is drawn once rather than
+  continuously nagged.
+*/
+@keyframes sparkle-twinkle {
+  0%, 62%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.85;
+  }
+  74% {
+    transform: scale(1.28) rotate(45deg);
+    opacity: 1;
+  }
+  86% {
+    transform: scale(0.94) rotate(90deg);
+    opacity: 0.9;
+  }
+  94% {
+    transform: scale(1.06) rotate(90deg);
+    opacity: 1;
+  }
+}
+
+.sparkle-twinkle {
+  transform-origin: center;
+  animation: sparkle-twinkle 3.2s ease-in-out infinite;
+}
+
+/*
+  Anyone who has asked their system not to animate gets a static icon. A
+  decorative twinkle is exactly the kind of motion that prompts the setting.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .sparkle-twinkle {
+    animation: none;
+  }
+}
+
+/*
+  Native UI follows the theme.
+
+  Scrollbars, form controls and the space behind the page are painted by the
+  browser, not by our CSS. Without this they stay light while everything else is
+  dark — most visibly as a white scrollbar track and a white flash between
+  navigations. Declared both ways round so a reader who has chosen light gets
+  light chrome too.
+*/
+:root {
+  color-scheme: dark;
+}
+
+:root:not(.dark) {
+  color-scheme: light;
+}
+
+/* Heading anchors (rehype-autolink-headings) wrap article headings: they are
+   links, but must read as headings, not underlined link text. Unlayered so it
+   wins over the typography plugin's link styles. */
+.prose :where(h2, h3, h4, h5, h6) > a {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+}
+
+/* Headings and titles on every page use the heading font (Inter, loaded in
+   app/layout.tsx). Unlayered so it applies to headings inside components and
+   article prose alike. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+/* `rounded` (no size) is hard-coded to 0.25rem in Tailwind 4, not a token. */
+.rounded {
+  border-radius: 8px;
+}
+
+/* "Force all corners to 8px" (user request, 24 Sep 2026): fully-round utilities
+   (avatars, pills, circular buttons) are included, so nothing on the site is
+   rounder than 8px. !important because rounded-full is not a theme token. */
+.rounded-full,
+[class*='rounded-full'],
+[class*='*:rounded-full'] > * {
+  border-radius: 8px !important;
+}
+
+/* Body copy: Inter at the default weight (400) on every page (loaded in
+   app/layout.tsx). In the base layer, so a weight utility on a specific
+   element (font-medium, font-semibold, ...) still wins. */
+@layer base {
+  body,
+  p {
+    font-family: var(--font-body);
+    font-weight: 400;
+  }
+  /* Card titles wrap their text in a <p> inside the heading: keep the
+     heading's weight and font there, not body copy's. */
+  :is(h1, h2, h3, h4, h5, h6) p {
+    font-family: inherit;
+    font-weight: inherit;
+  }
+}
+
+/* Every heading on every page (h1-h6: page titles, section titles, card
+   titles, article body headings, sidebar and footer headings) at weight 700.
+   User request, 6 Oct 2026; it replaces the single-post rule that kept article
+   body h2/h3 at 600. Unlayered, so it wins over font-semibold / font-medium
+   utilities and the prose heading scale. Headings that wrap their text in a
+   <p> or link inherit it. */
+:is(h1, h2, h3, h4, h5, h6) {
+  font-weight: 700;
+}
+
+/* "Where to buy" retailer list the AI writer appends to articles
+   (<ul class="where-to-buy">): items and links at 1rem. */
+.where-to-buy li,
+.where-to-buy li a {
+  font-size: 1rem;
+}
+
+/* /categories/: topic section headings at 2rem (user request, 24 Sep 2026).
+   Scoped to the section heading hook in shared/Heading.tsx, so card titles,
+   which are h2s too, keep their own size. */
+.page-categories-index h2.section-heading {
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+/* Home page: section headings at 2rem / 700 (user request, 24 Sep 2026).
+   Scoped to the section-heading hook (shared/Heading.tsx), so card titles,
+   which are h2s too, keep their own size. */
+.page-home h2.section-heading {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Home page: every section title and its description aligned left, including
+   sections that centre them elsewhere (isCenter). User request, 24 Sep 2026. */
+.page-home .section-heading-wrap,
+.page-home .section-heading,
+.page-home .section-subheading {
+  text-align: left;
+}
+.page-home .section-heading-wrap,
+.page-home .section-subheading {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Global Button Spacing Fix: equal top and bottom, left and right spacing */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0.625rem;    /* Equal top: 10px */
+  padding-bottom: 0.625rem; /* Equal bottom: 10px */
+  padding-left: 1.25rem;    /* Equal left: 20px */
+  padding-right: 1.25rem;   /* Equal right: 20px */
+  box-sizing: border-box;
+}
+
+.btn-sm {
+  padding-top: 0.5rem;      /* Equal top: 8px */
+  padding-bottom: 0.5rem;   /* Equal bottom: 8px */
+  padding-left: 1rem;       /* Equal left: 16px */
+  padding-right: 1rem;      /* Equal right: 16px */
+}
+
+.btn-xs {
+  padding-top: 0.375rem;    /* Equal top: 6px */
+  padding-bottom: 0.375rem; /* Equal bottom: 6px */
+  padding-left: 0.75rem;    /* Equal left: 12px */
+  padding-right: 0.75rem;   /* Equal right: 12px */
+}
+
+.btn-lg {
+  padding-top: 0.75rem;     /* Equal top: 12px */
+  padding-bottom: 0.75rem;  /* Equal bottom: 12px */
+  padding-left: 1.5rem;     /* Equal left: 24px */
+  padding-right: 1.5rem;    /* Equal right: 24px */
+}
+
+.btn-circle {
+  padding: 0 !important;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+.btn-circle.btn-xs {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.btn-circle.btn-sm {
+  width: 2rem;
+  height: 2rem;
+}
+
+/* All-topics FAQ: FlyonUI's .accordion-toggle is unlayered, so it beats Tailwind
+   utilities on the button — override it here, scoped to the page. */
+.page-categories-index .accordion-toggle {
+  padding-block: 10px;
+  padding-inline: 0;
+}

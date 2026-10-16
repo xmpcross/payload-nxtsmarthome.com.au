@@ -27,7 +27,7 @@ export default function TableOfContents({ headings }: { headings: Heading[] }) {
       </p>
       <ul className="list-disc space-y-2.5 pl-[1.4rem] marker:text-[#0e0e0f] dark:marker:text-slate-300">
         {items.map((heading) => (
-          <li key={heading.id} className="text-[16px] leading-[1.45] text-[#0e0e0f] dark:text-slate-100">
+          <li key={heading.id} className="text-[16px] leading-[1.5625] text-[#0e0e0f] dark:text-slate-100">
             <a
               href={`#${heading.id}`}
               className="font-semibold text-[#0e0e0f] underline decoration-1 underline-offset-[5px] hover:text-[#626568] dark:text-slate-100 dark:hover:text-slate-300"
