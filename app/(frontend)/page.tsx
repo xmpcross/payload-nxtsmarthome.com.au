@@ -1,15 +1,14 @@
 import { getSettings } from '@/lib/site-content'
-import SectionMagazine10 from '@/components/SectionMagazine10'
 import { getCategoriesWithPosts } from '@/data/categories'
-import { toTPost } from '@/data/posts'
 import { getAllArticles } from '@/lib/content'
 import { site } from '@/lib/site'
 import type { Metadata } from 'next'
 import JsonLd from '@/components/JsonLd'
-import EditorsChoiceSection from '@/components/home/EditorsChoiceSection'
-import ZairaBottomSections from '@/components/home/ZairaBottomSections'
-import AmazonSmartHomeBanner from '@/components/home/AmazonSmartHomeBanner'
-import HomeIntro from '@/components/home/HomeIntro'
+import HomeLanding, { type HomeProduct } from '@/components/home/HomeLanding'
+import { getShoppableTopProducts, isIndexableProduct } from '@/lib/products'
+import { resolveAuthor } from '@/lib/authors'
+import { AFFILIATE_ENABLED } from '@/lib/affiliate'
+import { ADS_ENABLED } from '@/lib/ads'
 import { metaDescription, pageAlternates, pageTitle, titleText, WEBSITE_ID } from '@/lib/seo'
 
 export const revalidate = 300
@@ -29,18 +28,45 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const settings = await getSettings()
   const articles = await getAllArticles()
-  // Featured first, then newest, for the lead grid.
-  const lead = [...articles.filter((a) => a.featured), ...articles.filter((a) => !a.featured)].slice(0, 8)
-
+  // getAllArticles is newest first: the Latest guides section shows the newest.
   const categories = await getCategoriesWithPosts()
-  const topics = categories.filter((c) => c.count > 0).sort((a, b) => b.count - a.count)
 
-  const allPosts = articles.map(toTPost)
+  // Price comparison: curated (indexable) products with 3+ priced AU retailers,
+  // one per category where possible.
+  const shoppable = await getShoppableTopProducts()
+  const priced = (p: (typeof shoppable)[number]) =>
+    (p.retailers || []).filter((r) => typeof r.priceAud === 'number').sort((x, y) => (x.priceAud as number) - (y.priceAud as number))
+  const eligible = shoppable.filter((p) => isIndexableProduct(p) && priced(p).length >= 3)
+  const picks: typeof eligible = []
+  for (const slug of ['hubs-and-platforms', 'energy-and-solar', 'robot-vacuums', 'security-and-cameras', 'lighting', 'climate-and-comfort', 'entertainment-and-audio']) {
+    const p = eligible.filter((x) => x.categorySlug === slug).sort((x, y) => priced(y).length - priced(x).length)[0]
+    if (p && picks.length < 6) picks.push(p)
+  }
+  const products: HomeProduct[] = picks.map((p) => {
+    const offers = priced(p)
+    return {
+      slug: p.slug,
+      name: p.brand && !p.name.toLowerCase().startsWith(p.brand.toLowerCase()) ? `${p.brand} ${p.name}` : p.name,
+      category: p.categoryName ?? '',
+      image: p.image,
+      bestFor: p.bestFor,
+      low: offers[0].priceAud as number,
+      lowAt: offers[0].name,
+      retailers: offers.length,
+    }
+  })
+  const retailerCount = new Set(shoppable.flatMap((p) => (p.retailers || []).map((r) => r.name))).size
+  const productCount = shoppable.filter(isIndexableProduct).length
+
+  const ed = resolveAuthor(site.organisation.editor.slug)
+  // Says only what is true of the site today (AFFILIATE_ENABLED / ADS_ENABLED).
+  const funding = AFFILIATE_ENABLED || ADS_ENABLED
+    ? `${[AFFILIATE_ENABLED && 'Some retailer links are affiliate links', ADS_ENABLED && 'the site shows advertising'].filter(Boolean).join(', and ')}. They are labelled where they appear, and never decide what we recommend.`
+    : 'No brand or retailer pays for coverage. If we add affiliate links or advertising, they will be labelled where they appear and will never decide what we recommend.'
 
   return (
-    <div className="page-home relative container space-y-[50px] pt-[30px] pb-28 lg:space-y-[50px] lg:pt-[30px] lg:pb-32">
+    <div className="page-home relative container">
       <JsonLd
         data={{
           '@context': 'https://schema.org',
@@ -56,19 +82,15 @@ export default async function HomePage() {
         }}
       />
 
-      <HomeIntro title={settings.homeTitle || HOME_TITLE} />
-
-      {/* Top Magazine Lead Grid Section */}
-      <SectionMagazine10 posts={lead.map(toTPost)} />
-
-      {/* Amazon Smart Home Interactive Banner */}
-      <AmazonSmartHomeBanner />
-
-      {/* Editors Choice Carousel Section */}
-      <EditorsChoiceSection posts={allPosts} />
-
-      {/* Zaira Theme Bottom Sections (Recent Posts, Trending News, Sidebar & Bottom Banner) */}
-      <ZairaBottomSections posts={allPosts} categories={topics} />
+      <HomeLanding
+        articles={articles}
+        categories={categories}
+        products={products}
+        productCount={productCount}
+        retailerCount={retailerCount}
+        editor={{ name: ed.name, slug: ed.slug, avatar: ed.avatar, bio: ed.bio }}
+        funding={funding}
+      />
     </div>
   )
 }
