@@ -95,6 +95,7 @@ const defaultMetadata: Metadata = {
     other: {
       'msvalidate.01': '057158952120360611CA2F41AD7D5B50',
       'verify-admitad': 'd39c912cae',
+      'Takeads-verification': '2b77af23-a140-4f74-9d19-742b03a689a6',
     },
   },
   robots: {
