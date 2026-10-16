@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import ArticlesList from '@/components/ArticlesList';
 import { getAllArticles } from '@/lib/content';
+import { pageAlternates, pageTitle } from '@/lib/seo';
 
 /*
  * Listings refresh from Strapi every 5 minutes (ISR), like /articles/page/N/.
@@ -11,10 +12,10 @@ import { getAllArticles } from '@/lib/content';
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: 'All Articles — Smart Home Guides for Australian Homes',
+  title: pageTitle('All Smart Home Guides for Australian Homes'),
   description:
     'Every smart home buying guide, setup guide, comparison and explainer on NXT Smart Home. Search a title or filter by topic and type.',
-  alternates: { canonical: '/articles/' },
+  alternates: pageAlternates('/articles/'),
 };
 
 export default async function ArticlesIndex() {

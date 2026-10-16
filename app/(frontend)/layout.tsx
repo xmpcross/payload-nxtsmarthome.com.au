@@ -49,14 +49,21 @@ const defaultMetadata: Metadata = {
   title: {
     // 89 chars previously — truncated in every result. Short form fits.
     default: `${site.name} — ${site.shortTagline}`,
-    // No brand suffix: article titles already run 45-65 chars, so appending
-    // " | NXT Smart Home" pushed them past the ~60-char display limit and cut
-    // the meaningful part. The WebSite JSON-LD carries the site name instead.
-    template: '%s',
+    // generateMetadata below sets the live template, "%s | <site name>". Pages
+    // pass their title through pageTitle() (lib/seo.ts), which strips a brand
+    // already in the text and returns an absolute title (no suffix) when the
+    // suffix would push it past ~60 characters — so the brand appears once.
+    template: `%s | ${site.name}`,
   },
   description: site.metaDescription,
   applicationName: site.name,
-  alternates: { canonical: '/', types: { 'application/rss+xml': '/feed.xml' } },
+  /*
+    No root canonical: it was inherited by every page that sets none — the 404
+    page included, which then pointed its canonical at the home page (audit M3).
+    Pages set their own through pageAlternates() (lib/seo.ts), which also
+    repeats this feed link, since a page's alternates replace these wholesale.
+  */
+  alternates: { types: { 'application/rss+xml': [{ url: '/feed.xml', title: `${site.name} — latest guides` }] } },
   // Files live in public/. The SVG is served to browsers that support it and stays
   // crisp at any density; the PNGs cover Android/iOS home screens and the .ico is
   // there for older browsers that still request /favicon.ico directly.
@@ -98,11 +105,13 @@ const defaultMetadata: Metadata = {
       'Takeads-verification': '2b77af23-a140-4f74-9d19-742b03a689a6',
     },
   },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
-  },
+  /*
+    Preview limits only. index/follow are the default and are not stated: the
+    404 page inherits this, and stating "index, follow" there contradicted the
+    "noindex" Next.js injects on a 404 (audit M3). Pages that must stay out of
+    the index set their own robots.
+  */
+  robots: { 'max-image-preview': 'large', 'max-snippet': -1 },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

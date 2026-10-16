@@ -10,6 +10,7 @@ import EditorsChoiceSection from '@/components/home/EditorsChoiceSection'
 import ZairaBottomSections from '@/components/home/ZairaBottomSections'
 import AmazonSmartHomeBanner from '@/components/home/AmazonSmartHomeBanner'
 import HomeIntro from '@/components/home/HomeIntro'
+import { metaDescription, pageAlternates, pageTitle, titleText, WEBSITE_ID } from '@/lib/seo'
 
 export const revalidate = 300
 
@@ -19,7 +20,12 @@ const HOME_DESCRIPTION =
 
 export async function generateMetadata(): Promise<Metadata> {
  const settings=await getSettings()
- return {title:{absolute:`${settings.homeTitle||HOME_TITLE} | ${settings.name}`},description:settings.homeDescription||HOME_DESCRIPTION,alternates:{canonical:'/'},openGraph:{type:'website',url:'/',title:`${settings.homeTitle||HOME_TITLE} | ${settings.name}`,description:settings.homeDescription||HOME_DESCRIPTION,images:[settings.ogImage]}}
+ // Brand once (a CMS homeTitle that already ends in the brand is not doubled);
+ // description capped at ~155 chars on a word boundary.
+ const title=titleText(pageTitle(settings.homeTitle||HOME_TITLE))
+ const full=title.toLowerCase().includes(settings.name.toLowerCase())?title:`${title} | ${settings.name}`
+ const description=metaDescription(settings.homeDescription||HOME_DESCRIPTION)
+ return {title:{absolute:full},description,alternates:pageAlternates('/'),openGraph:{type:'website',url:'/',title:full,description,images:[settings.ogImage]}}
 }
 
 export default async function HomePage() {
@@ -43,8 +49,10 @@ export default async function HomePage() {
           description: HOME_DESCRIPTION,
           url: `${site.url}/`,
           inLanguage: site.language,
-          isPartOf: { '@type': 'WebSite', name: site.name, url: `${site.url}/` },
-          about: topics.map((t) => ({ '@type': 'Thing', name: t.name })),
+          // The site-wide WebSite node by @id, not a second untyped copy; and no
+          // bare Thing list, which added no entity information (schema audit #8).
+          '@id': `${site.url}/#webpage`,
+          isPartOf: { '@id': WEBSITE_ID },
         }}
       />
 

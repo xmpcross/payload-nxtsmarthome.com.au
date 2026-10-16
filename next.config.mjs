@@ -32,6 +32,8 @@ function adsenseRedirects() {
 
 const nextConfig = {
   experimental: { cpus: 2 },
+  // No "x-powered-by: Next.js" header (audit L2): it only advertises the stack.
+  poweredByHeader: false,
   ...(staticExport ? { output: 'export' } : {}),
   // deploy.sh builds into a side directory while the live server keeps running,
   // then swaps it in. Unset, this is the normal .next.

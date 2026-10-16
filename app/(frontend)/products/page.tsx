@@ -8,7 +8,7 @@ import { FOCUS } from '@/components/category/shared';
 import { getAllArticles } from '@/lib/content';
 import { guideMentions } from '@/lib/product-mentions';
 import { getIndexableTopProducts, getShoppableTopProducts } from '@/lib/products';
-import { faqJsonLd } from '@/lib/seo';
+import { faqJsonLd, pageAlternates, pageTitle } from '@/lib/seo';
 import { categories, site } from '@/lib/site';
 
 const TITLE = 'Smart Home Devices for Australian Homes';
@@ -17,9 +17,10 @@ const DESCRIPTION =
   'Smart home devices sold in Australia — cameras, robot vacuums, lighting, hubs and climate — with links to Amazon AU, JB Hi-Fi, The Good Guys and Bunnings.';
 
 export const metadata: Metadata = {
-  title: `${TITLE} | NXT Smart Home`,
+  // The root template adds the brand; it was also written here, so it appeared twice.
+  title: pageTitle(TITLE),
   description: DESCRIPTION,
-  alternates: { canonical: '/products/' },
+  alternates: pageAlternates('/products/'),
   /*
     The hub lists price listings; with no indexable product among them it is
     noindex, follow (AdSense Task 2, lib/products.ts isIndexableProduct). The

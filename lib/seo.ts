@@ -14,7 +14,7 @@ export function organisationJsonLd() {
     '@graph': [
       {
         '@type': 'Organization',
-        '@id': `${site.url}/#organisation`,
+        '@id': ORGANISATION_ID,
         name: site.organisation.name,
         url: site.url,
         email: site.organisation.email,
@@ -26,22 +26,84 @@ export function organisationJsonLd() {
       },
       {
         '@type': 'WebSite',
-        '@id': `${site.url}/#website`,
+        '@id': WEBSITE_ID,
         url: site.url,
         name: site.name,
         description: site.description,
         inLanguage: site.language,
         publisher: { '@id': `${site.url}/#organisation` },
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: {
-            '@type': 'EntryPoint',
-            urlTemplate: `${site.url}/search/?q={search_term_string}`,
-          },
-          'query-input': 'required name=search_term_string',
-        },
+        /*
+          No SearchAction: it advertised /search/, which robots.txt disallows
+          (and which is noindex), and Google retired the sitelinks search box
+          in Nov 2024, so it had no benefit to offset the contradiction.
+        */
       },
     ],
+  };
+}
+
+/** @id of the site-wide WebSite node, for isPartOf references. */
+export const WEBSITE_ID = `${site.url}/#website`;
+/** @id of the site-wide Organization node. */
+export const ORGANISATION_ID = `${site.url}/#organisation`;
+
+/**
+ * @id for an author entity, shared by the Article byline and the author page so
+ * both describe one node. The editorial team is an Organization, everyone
+ * else a Person.
+ */
+export function authorEntityId(slug: string): string {
+  return `${site.url}/authors/${slug}/#${slug === DEFAULT_AUTHOR_SLUG ? 'organisation' : 'person'}`;
+}
+
+/**
+ * Brand suffix the root layout's title template appends (" | NXT Smart Home").
+ * Kept in step with app/(frontend)/layout.tsx.
+ */
+const TITLE_SUFFIX_LENGTH = ` | ${site.name}`.length;
+const TITLE_MAX = 60;
+const escapeRe = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const BRAND_TAIL = new RegExp(`\\s*[|·•—–-]\\s*${escapeRe(site.name)}(?:\\s+AU)?\\s*$`, 'i');
+
+/**
+ * A page <title> with the brand exactly once, or not at all when it would not fit.
+ *
+ * - A trailing " | NXT Smart Home" (or " — NXT Smart Home AU") already in the
+ *   source text — common in CMS seoTitle fields — is stripped, so the template
+ *   cannot double it.
+ * - A title that still names the brand ("Contact NXT Smart Home") is returned
+ *   as an absolute title, so the template does not add it again.
+ * - A title that would pass ~60 characters with the suffix is returned
+ *   absolute, without the brand: the meaningful part is what survives
+ *   truncation in a results page.
+ * - Otherwise the plain string, and the root template adds " | NXT Smart Home".
+ *
+ * The CMS text itself is never rewritten beyond removing the duplicate brand.
+ */
+export function pageTitle(text: string): string | { absolute: string } {
+  let title = text.replace(/\s+/g, ' ').trim();
+  while (BRAND_TAIL.test(title)) title = title.replace(BRAND_TAIL, '').trim();
+  if (!title) return { absolute: site.name };
+  if (title.toLowerCase().includes(site.name.toLowerCase())) return { absolute: title };
+  if (title.length + TITLE_SUFFIX_LENGTH > TITLE_MAX) return { absolute: title };
+  return title;
+}
+
+/** The text of a pageTitle() result, for og:title / twitter:title. */
+export function titleText(title: string | { absolute: string }): string {
+  return typeof title === 'string' ? title : title.absolute;
+}
+
+/**
+ * `alternates` for a page: its canonical plus the RSS feed. A page's
+ * `alternates` replaces the root layout's wholesale, so without repeating the
+ * feed here the <link rel="alternate" type="application/rss+xml"> only
+ * appeared on pages that set no canonical at all.
+ */
+export function pageAlternates(canonical: string) {
+  return {
+    canonical,
+    types: { 'application/rss+xml': [{ url: '/feed.xml', title: `${site.name} — latest guides` }] },
   };
 }
 
@@ -91,6 +153,9 @@ export function articleJsonLd(article: Article) {
       const isTeam = a.slug === DEFAULT_AUTHOR_SLUG;
       return {
         '@type': isTeam ? 'Organization' : 'Person',
+        // Same @id as the entity on the author's own page, so the byline and
+        // the profile resolve to one node.
+        '@id': authorEntityId(a.slug),
         name: a.name,
         url: `${site.url}/authors/${a.slug}/`,
       };
@@ -131,6 +196,41 @@ export function itemListJsonLd(article: Article) {
         ...(product.image ? { image: abs(product.image) } : {}),
       },
     })),
+  };
+}
+
+/**
+ * Page-level schema for the CMS information pages (about, contact, how-we-test,
+ * affiliate disclosure, privacy, cookies, terms): AboutPage / ContactPage /
+ * WebPage, tied to the site and organisation by @id, with its breadcrumb.
+ * Nothing here asserts anything the page does not show.
+ */
+export function infoPageJsonLd({ slug, name, description }: { slug: string; name: string; description?: string }) {
+  const url = abs(`/${slug}/`);
+  const type = slug === 'about' ? 'AboutPage' : slug === 'contact' ? 'ContactPage' : 'WebPage';
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': type,
+        '@id': `${url}#webpage`,
+        url,
+        name,
+        ...(description ? { description } : {}),
+        inLanguage: site.language,
+        isPartOf: { '@id': WEBSITE_ID },
+        ...(type === 'WebPage' ? {} : { about: { '@id': ORGANISATION_ID } }),
+        breadcrumb: { '@id': `${url}#breadcrumb` },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${url}#breadcrumb`,
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: abs('/') },
+          { '@type': 'ListItem', position: 2, name, item: url },
+        ],
+      },
+    ],
   };
 }
 

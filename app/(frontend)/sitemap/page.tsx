@@ -2,11 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import JsonLd from '@/components/JsonLd';
 import PageHeader from '@/components/PageHeader';
-import { pageCount } from '@/components/Pagination';
 import { articleHref, categoriesWithCounts, getAllArticles } from '@/lib/content';
 import { getAllAuthors, resolveAuthor } from '@/lib/authors';
 import { getShoppableTopProducts } from '@/lib/products';
-import { breadcrumbJsonLd } from '@/lib/seo';
+import { breadcrumbJsonLd, pageAlternates, pageTitle } from '@/lib/seo';
 import { site } from '@/lib/site';
 
 /**
@@ -25,9 +24,9 @@ const DESCRIPTION =
   'Every page on NXT Smart Home in one place — articles by topic, the product catalogue, contributors and site information.';
 
 export const metadata: Metadata = {
-  title: 'Sitemap',
+  title: pageTitle('Sitemap'),
   description: DESCRIPTION,
-  alternates: { canonical: '/sitemap/' },
+  alternates: pageAlternates('/sitemap/'),
 };
 
 const SITE_PAGES: Array<{ href: string; label: string }> = [
@@ -93,7 +92,8 @@ export default async function SitemapPage() {
     }, new Map<string, { name: string; items: typeof products }>()),
   ).sort((a, b) => a[1].name.localeCompare(b[1].name));
 
-  const articlePages = Array.from({ length: Math.max(0, pageCount(articles.length) - 1) }, (_, i) => i + 2);
+  // No /articles/page/N/ links: /articles/ lists every article on one page and
+  // the paginated URLs permanently redirect there (audit H3 / S5).
 
   return (
     <div className="container py-14 lg:py-20">
@@ -133,13 +133,6 @@ export default async function SitemapPage() {
           {SITE_PAGES.map((p) => (
             <li key={p.href}>
               <Link href={p.href} className={linkClass}>{p.label}</Link>
-            </li>
-          ))}
-          {articlePages.map((n) => (
-            <li key={n}>
-              <Link href={`/articles/page/${n}/`} className={linkClass}>
-                All articles — page {n}
-              </Link>
             </li>
           ))}
         </ul>

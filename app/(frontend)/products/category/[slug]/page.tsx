@@ -10,6 +10,7 @@ import { articleHref, getAllArticles } from '@/lib/content';
 import { guideMentions } from '@/lib/product-mentions';
 import { getShoppableTopProducts, isIndexableProduct } from '@/lib/products';
 import { categories, getCategory, site } from '@/lib/site';
+import { metaDescription, pageAlternates, pageTitle } from '@/lib/seo';
 import { responsiveImg } from '@/lib/image'
 
 // The picks and guides come from the articles, which refresh from Strapi every 5 minutes.
@@ -39,9 +40,11 @@ export async function generateMetadata({
 
   return {
     // No "best" or "top rated": these are listings, not tested rankings.
-    title: `${category.name} Devices for Australian Homes`,
-    description: `${category.name} devices sold by Australian retailers, with who each suits and where to check the price: Amazon AU, JB Hi-Fi, The Good Guys and more.`,
-    alternates: { canonical: `/products/category/${category.slug}/` },
+    title: pageTitle(`${category.name} Devices in Australia`),
+    description: metaDescription(
+      `${category.name} devices sold by Australian retailers, with who each suits and where to check the price: Amazon AU, JB Hi-Fi, The Good Guys and more.`,
+    ),
+    alternates: pageAlternates(`/products/category/${category.slug}/`),
     ...(indexableHere ? {} : { robots: { index: false, follow: true } }),
   };
 }

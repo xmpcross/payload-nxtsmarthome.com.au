@@ -5,7 +5,7 @@ import FlyonAccordion from '@/components/flyonui/FlyonAccordion';
 import { getCategories } from '@/data/categories';
 import { toTPost } from '@/data/posts';
 import { getAllArticles } from '@/lib/content';
-import { breadcrumbJsonLd } from '@/lib/seo';
+import { breadcrumbJsonLd, pageAlternates, pageTitle } from '@/lib/seo';
 import { getShoppableTopProducts } from '@/lib/products';
 import { getCategory, site } from '@/lib/site';
 import Link from 'next/link';
@@ -13,12 +13,13 @@ import Link from 'next/link';
 import SmartHomeLottieBanner from '@/components/SmartHomeLottieBanner';
 
 const DESCRIPTION =
-  'Browse Australian smart home guides, reviews and setup advice by topic — security cameras, smart lighting, climate control, home hubs, Matter & Thread protocols, setup and buying guides.';
+  'Browse Australian smart home guides by topic: security cameras, lighting, climate, energy, hubs, Matter and Thread, plus setup and buying guides.';
 
 export const metadata: Metadata = {
-  title: 'Smart Home Topics & Categories — NXT Smart Home AU',
+  // The root template appends " | NXT Smart Home"; the brand is not repeated here.
+  title: pageTitle('Smart Home Topics & Categories'),
   description: DESCRIPTION,
-  alternates: { canonical: '/all-topics/' },
+  alternates: pageAlternates('/all-topics/'),
 };
 
 // Topic counts and the per-topic rows refresh with the articles (ISR).
@@ -26,7 +27,12 @@ export const revalidate = 300;
 
 export default async function CategoriesIndex() {
   const articles = await getAllArticles();
-  const allPosts = articles.map(toTPost);
+  /*
+    AllTopicsClient links each post as `/${handle}/`, and toTPost's handle
+    already ends in a slash, which produced "//" hrefs (audit H3). Hand it the
+    handle without the trailing slash so the link comes out canonical.
+  */
+  const allPosts = articles.map(toTPost).map((p) => ({ ...p, handle: p.handle.replace(/\/+$/, '') }));
   const rawCats = await getCategories();
   const cats = rawCats.filter((c) => c.count > 0 && c.handle !== 'robot-vacuums' && c.handle !== 'robot-vacuum');
   const withProducts = new Set((await getShoppableTopProducts()).map((p) => p.categorySlug));
@@ -174,7 +180,7 @@ export default async function CategoriesIndex() {
             <div className="pt-2 grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-neutral-200/80 bg-transparent p-3.5 dark:border-neutral-800">
                 <div className="text-2xl font-black text-primary-600 dark:text-primary-400">{articles.length}</div>
-                <div className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mt-0.5">Tested AU Guides</div>
+                <div className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mt-0.5">Australian Guides</div>
               </div>
               <div className="rounded-2xl border border-neutral-200/80 bg-transparent p-3.5 dark:border-neutral-800">
                 <div className="text-2xl font-black text-primary-600 dark:text-primary-400">{cats.length}</div>
@@ -212,7 +218,7 @@ export default async function CategoriesIndex() {
               href="/how-we-test/"
               className="shrink-0 inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-neutral-800 hover:border-primary-500 hover:text-primary-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-primary-400 dark:hover:text-primary-400 transition-colors shadow-xs"
             >
-              <span>How We Test Devices</span>
+              <span>How We Research</span>
               <svg className="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
             </Link>
           </div>

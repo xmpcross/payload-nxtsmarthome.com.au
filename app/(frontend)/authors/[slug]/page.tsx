@@ -6,7 +6,7 @@ import { toTPost } from '@/data/posts';
 import JsonLd from '@/components/JsonLd';
 import { getAllArticles } from '@/lib/content';
 import { AUTHOR_ALIASES, getAllAuthors, getAuthorBySlug, resolveAuthor } from '@/lib/authors';
-import { breadcrumbJsonLd, metaDescription } from '@/lib/seo';
+import { authorEntityId, breadcrumbJsonLd, metaDescription, pageAlternates, pageTitle } from '@/lib/seo';
 import { site } from '@/lib/site';
 
 // Listings refresh from Strapi every 5 minutes (ISR), like the article pages.
@@ -28,9 +28,9 @@ export async function generateMetadata({
   // the index (and the sitemap) until there is something to list.
   const count = (await getAllArticles()).filter((a) => resolveAuthor(a.author).slug === author.slug).length;
   return {
-    title: `${author.name} — Articles`,
+    title: pageTitle(`${author.name} — Articles`),
     description: metaDescription(author.bio),
-    alternates: { canonical: `/authors/${author.slug}/` },
+    alternates: pageAlternates(`/authors/${author.slug}/`),
     ...(count ? {} : { robots: { index: false, follow: true } }),
   };
 }
@@ -61,6 +61,8 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
         data={{
           '@context': 'https://schema.org',
           '@type': author.slug === 'nxt-smart-home-editorial' ? 'Organization' : 'Person',
+          // Matches the Article byline's author @id (lib/seo.ts articleJsonLd).
+          '@id': authorEntityId(author.slug),
           name: author.name,
           url: `${site.url}/authors/${author.slug}/`,
           ...(author.bio ? { description: author.bio } : {}),

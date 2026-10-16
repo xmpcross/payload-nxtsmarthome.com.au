@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { metaDescription } from '@/lib/seo';
+import { metaDescription, pageAlternates, pageTitle } from '@/lib/seo';
 import { notFound } from 'next/navigation';
 import CategoryView from '@/components/CategoryView';
 import { getAllArticles, getArticlesByCategory } from '@/lib/content';
@@ -25,11 +25,14 @@ export async function generateMetadata({
   return {
     // Not "Reviews": the guides are research-based and the site publishes no
     // reviews (/how-we-test/, PRODUCT.md).
-    title: isGuideCategory(category.slug)
-      ? `Smart Home ${category.name} for Australian Homes`
-      : `${category.name} — Australian Guides & Buying Advice`,
+    // Short enough to carry " | NXT Smart Home" within ~60 characters.
+    title: pageTitle(
+      isGuideCategory(category.slug)
+        ? `Smart Home ${category.name} for Australia`
+        : `${category.name} Guides for Australia`,
+    ),
     description: metaDescription(category.intro),
-    alternates: { canonical: `/categories/${category.slug}/` },
+    alternates: pageAlternates(`/categories/${category.slug}/`),
     // A category with nothing published is a thin page: keep it out of the
     // index until its first article lands (it leaves the sitemap too).
     ...(articles.length === 0 ? { robots: { index: false, follow: true } } : {}),

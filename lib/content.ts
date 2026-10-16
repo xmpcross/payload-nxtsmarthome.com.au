@@ -11,6 +11,7 @@ import rehypeStringify from 'rehype-stringify';
 import { categories, getCategoryByKey, type Category } from './site';
 import { editorialHits, guardMode, postTexts } from './editorial-guard.mjs';
 import { mergedSlugTargets } from './merged-articles.mjs';
+import { articleHref } from './urls';
 
 
 /** The kinds of article this site publishes. Drives the badge and the JSON-LD type. */
@@ -163,6 +164,75 @@ export function canonicaliseArticleLinks(markdown: string): string {
   );
 }
 
+/*
+ * Render-time normalisation of every internal href in an article body (audit
+ * H3). The markdown pass above only sees `](…)` links that use a category key;
+ * bodies also carry raw <a href> HTML, links without the trailing slash,
+ * `//` doubled slashes, /product/<slug> (singular) and absolute links to this
+ * domain. Each of those costs a redirect hop. Rewritten here, after rendering,
+ * so markdown and raw HTML links are handled alike:
+ *
+ *   - this domain (http/https, with or without www) becomes a root-relative path
+ *   - repeated slashes collapse, and a page path gets exactly one trailing slash
+ *   - /<category-key>/<slug> becomes /<category-slug>/<slug>/ (security ->
+ *     security-and-cameras, etc. — the article route 308s the key form)
+ *   - /product/<slug> becomes /products/<slug>/ (next.config.mjs redirect)
+ *   - /<any-category>/<article-slug> for a known article becomes that article's
+ *     canonical path, and a merged-away slug its survivor — the article route
+ *     resolves by slug and redirects anything else there
+ *
+ * Left alone: external URLs, protocol-relative URLs, mailto:/tel:, anchors
+ * (#…), query-only hrefs (?…), and paths ending in a file extension.
+ */
+const OWN_ORIGIN = /^https?:\/\/(?:www\.)?nxtsmarthome\.com\.au(?=[/?#]|$)/i;
+const KEY_TO_SLUG = new Map<string, string>(categories.filter((c) => c.key !== c.slug).map((c) => [c.key, c.slug]));
+const ARTICLE_PREFIXES = new Set(['articles', ...categories.map((c) => c.slug), ...categories.map((c) => c.key)]);
+
+/**
+ * Canonical form of one internal href. `articlePaths` maps an article slug to
+ * its canonical path (live articles plus merged-away slugs); without it only
+ * the shape-level fixes apply.
+ */
+export function normaliseInternalHref(href: string, articlePaths?: Map<string, string>): string {
+  const raw = href.trim();
+  let rest: string;
+  if (OWN_ORIGIN.test(raw)) rest = raw.replace(OWN_ORIGIN, '');
+  else if (raw.startsWith('/') && !raw.startsWith('//')) rest = raw;
+  else return href;
+
+  const split = rest.match(/^([^?#]*)([\s\S]*)$/);
+  const pathname = split?.[1] ?? '';
+  const suffix = split?.[2] ?? '';
+  const segments = pathname.split('/').filter(Boolean);
+  if (!segments.length) return `/${suffix}`;
+
+  // A file (/feed.xml, /images/x.webp, /ads.txt): no trailing slash.
+  if (/\.[a-z0-9]{1,5}$/i.test(segments[segments.length - 1])) return `/${segments.join('/')}${suffix}`;
+
+  if (segments.length === 2 && segments[0] === 'product') {
+    segments[0] = 'products';
+  } else if (segments.length === 2 && ARTICLE_PREFIXES.has(segments[0])) {
+    const known = articlePaths?.get(segments[1]);
+    if (known) return `${known}${suffix}`;
+    segments[0] = KEY_TO_SLUG.get(segments[0]) ?? segments[0];
+  }
+  return `/${segments.join('/')}/${suffix}`;
+}
+
+/** Apply normaliseInternalHref to every href in a rendered HTML fragment. */
+export function normaliseInternalLinks(html: string, articlePaths?: Map<string, string>): string {
+  return (
+    html
+      // Generation artefact: JSON-escaped quotes (href=\"…\") stored in the
+      // body made browsers resolve the link relative to the page (audit H2).
+      .replace(/(\shref=)\\"([^"\\]*)\\"/gi, '$1"$2"')
+      .replace(/(\shref=)(["'])([^"']*)\2/gi, (_m, attr: string, quote: string, value: string) => {
+        // Entity-encoded ampersands survive untouched: the suffix is copied verbatim.
+        return `${attr}${quote}${normaliseInternalHref(value, articlePaths)}${quote}`;
+      })
+  );
+}
+
 async function renderMarkdown(markdown: string): Promise<string> {
   markdown = canonicaliseArticleLinks(markdown);
   const file = await unified()
@@ -237,8 +307,9 @@ async function fromStrapi(post: StrapiPost): Promise<Article | null> {
     html: await renderMarkdown(body),
     raw: body,
     wordCount: words,
-    // The CMS carries its own estimate; fall back to the same 225wpm the files used.
-    readingMinutes: post.readingTimeMinutes || Math.max(1, Math.round(words / 225)),
+    // From the word count at 225wpm. The CMS's readingTimeMinutes was stale
+    // (a 3,800-word guide showed "6 min read"), so it is no longer used.
+    readingMinutes: Math.max(1, Math.round(words / 225)),
     headings: extractHeadings(body),
     categoryMeta: getCategoryByKey(categoryKey),
   } as Article;
@@ -311,6 +382,13 @@ export async function getAllArticles(): Promise<Article[]> {
   const articles = built
     .filter((a): a is Article => a !== null)
     .sort((a, b) => +new Date(b.date) - +new Date(a.date));
+
+  // Internal links in each body, made canonical now that every article's path
+  // is known: merged-away slugs first, so a live article of the same slug wins.
+  const articlePaths = new Map<string, string>(mergedSlugTargets());
+  for (const a of articles) articlePaths.set(a.slug, articleHref(a));
+  for (const a of articles) a.html = normaliseInternalLinks(a.html, articlePaths);
+
   cache = { at: Date.now(), articles };
 
   return articles;
