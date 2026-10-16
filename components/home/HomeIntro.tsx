@@ -16,7 +16,7 @@ const START_HERE = [
 export default function HomeIntro({ title }: { title: string }) {
   return (
     <section>
-      <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl dark:text-white">{title}</h1>
+      <h1 className="text-[2.5rem] font-bold tracking-tight text-neutral-900 dark:text-white">{title}</h1>
       <p className="mt-3 text-base leading-relaxed text-neutral-600 dark:text-neutral-400">
         NXT Smart Home is an independent guide to building a smart home in Australia. We explain which devices suit
         Australian wiring and plugs, what renters can set up without drilling, which jobs need a licensed electrician,
