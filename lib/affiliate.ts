@@ -2,14 +2,22 @@
  * Affiliate link layer.
  *
  * Every outbound merchant link on the site goes through `affiliateUrl()`.
- * There is no affiliate integration at present: Geniuslink was removed on
- * 17 Oct 2026 (user request), after Sovrn and Takeads on 6 Oct 2026, so links
- * go to the retailer unchanged and every "we may earn a commission" notice is
- * hidden (AFFILIATE_ENABLED). To add a network, wrap URLs in affiliateUrl(),
- * list it in configuredNetworks() and set AFFILIATE_ENABLED from its config.
+ * Affiliation is done in the browser by Sovrn Commerce (VigLink), added on
+ * 17 Oct 2026 (user request): its script (public/js/viglink-init.js, loaded by
+ * components/VigLink.tsx) rewrites supported merchant links when clicked, so
+ * links are rendered here unchanged. Geniuslink was removed earlier the same
+ * day. AFFILIATE_ENABLED follows whether the VigLink key is set, so commission
+ * notices appear only while the script is on.
  */
 
 export type Network = 'direct';
+
+/**
+ * Sovrn Commerce (VigLink) publisher key. It is public (it ships in every page),
+ * so a default lives here; NEXT_PUBLIC_VIGLINK_KEY overrides it, and setting
+ * that to an empty value switches VigLink off at the next build.
+ */
+export const VIGLINK_KEY = (process.env.NEXT_PUBLIC_VIGLINK_KEY ?? '20be2ac7ea01bfc9ab29775bb26552ee').trim();
 
 export interface AffiliateOptions {
   /** Kept for compatibility with existing components. Links are no longer wrapped here. */
@@ -23,7 +31,7 @@ export function detectNetwork(rawUrl: string): Network {
   return 'direct';
 }
 
-/** The retailer URL, unchanged: no affiliate network is configured. */
+/** The retailer URL, unchanged: VigLink affiliates it in the browser. */
 export function affiliateUrl(rawUrl: string, options: AffiliateOptions = {}): string {
   void options;
   return rawUrl;
@@ -35,6 +43,7 @@ export function affiliateUrl(rawUrl: string, options: AffiliateOptions = {}): st
  */
 export function configuredNetworks(): string[] {
   const live: string[] = [];
+  if (VIGLINK_KEY) live.push('Sovrn Commerce (VigLink)');
   return live;
 }
 
@@ -45,7 +54,7 @@ export function configuredNetworks(): string[] {
  * the cookie banner (a client component) reads these.
  */
 /** Any affiliate tracking at all. Off: every "we may earn a commission" notice is hidden. */
-export const AFFILIATE_ENABLED = false;
+export const AFFILIATE_ENABLED = Boolean(VIGLINK_KEY);
 
 /** Attributes every outbound commercial link must carry. */
 export const affiliateLinkAttrs = {

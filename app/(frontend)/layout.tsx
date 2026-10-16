@@ -9,6 +9,7 @@ import Footer from '@/components/Footer/Footer';
 import Header2 from '@/components/Header/Header2';
 import ThemeProvider from './theme-provider';
 import CookieBanner from '@/components/CookieBanner';
+import VigLink from '@/components/VigLink';
 import FlyonuiScript from '@/components/FlyonuiScript';
 import HeadScripts from '@/components/HeadScripts';
 import JsonLd from '@/components/JsonLd';
@@ -169,6 +170,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </ThemeProvider>
         <CookieBanner />
         <FlyonuiScript />
+        {/* Sovrn Commerce (VigLink), just before </body> as Sovrn's install asks. */}
+        <VigLink />
       </body>
     </html>
   );

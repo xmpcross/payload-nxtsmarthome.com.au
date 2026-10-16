@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { VIGLINK_KEY } from '@/lib/affiliate';
 import Link from 'next/link';
 import { ADS_ENABLED } from '@/lib/ads';
 
@@ -213,7 +214,7 @@ export default function CookieBanner() {
                 Google Analytics tells us which guides get read. <strong>It waits for your answer.</strong>
               </>
             )}{' '}
-            Read our{' '}
+            {VIGLINK_KEY && 'Sovrn Commerce (VigLink) may also affiliate outbound retailer links. '}Read our{' '}
             <Link
               href="/cookies/"
               className="font-semibold text-brand-700 underline underline-offset-2 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300"
