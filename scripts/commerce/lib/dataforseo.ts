@@ -19,8 +19,17 @@ import path from 'node:path'
 const BASE = 'https://api.dataforseo.com/v3/'
 export const AU_LOCATION_CODE = 2036
 export const LANGUAGE_CODE = 'en'
-/** Estimated cost per task_post task (USD); replaced by the observed average once known. */
+/**
+ * DataForSEO's published Standard-queue prices (dataforseo.com/pricing/merchant/google-shopping-api,
+ * checked 2026-10-17): Products $0.001 per SERP of up to 40 results (depth 41-80 = 2 SERPs,
+ * max depth 120 = 3 SERPs); Product Info $0.001 per product. Priority queue doubles both.
+ */
+export const PUBLISHED_COST: Record<Endpoint, number> = { product_info: 0.001, products: 0.001 }
+/** Budget-guard estimate per unit (USD): the published price plus a 50% margin; replaced by the observed average once known. */
 export const ESTIMATED_COST: Record<Endpoint, number> = { product_info: 0.0015, products: 0.0015 }
+/** A Google Shopping SERP holds up to 40 results; products is billed per SERP. */
+export const SERP_SIZE = 40
+export const serpsFor = (depth: number) => Math.max(1, Math.ceil(depth / SERP_SIZE))
 const BATCH = 100
 
 type Endpoint = 'product_info' | 'products'
@@ -72,13 +81,14 @@ export class DataForSeoClient {
     this.headers = { Authorization: `Basic ${Buffer.from(`${opts.login ?? ''}:${opts.password ?? ''}`).toString('base64')}`, 'Content-Type': 'application/json' }
   }
 
-  estimate(endpoint: Endpoint, tasks: number) {
-    return (this.observedCost[endpoint] ?? ESTIMATED_COST[endpoint]) * tasks
+  /** Estimated cost of `tasks` tasks of `units` billing units each (units = SERPs for products). */
+  estimate(endpoint: Endpoint, tasks: number, units = 1) {
+    return (this.observedCost[endpoint] ?? ESTIMATED_COST[endpoint]) * tasks * units
   }
 
   /** How many of `n` tasks fit in the remaining budget. */
-  private affordable(endpoint: Endpoint, n: number) {
-    const per = this.observedCost[endpoint] ?? ESTIMATED_COST[endpoint]
+  private affordable(endpoint: Endpoint, n: number, units: number) {
+    const per = (this.observedCost[endpoint] ?? ESTIMATED_COST[endpoint]) * units
     const left = this.opts.maxCost - this.spent
     return Math.max(0, Math.min(n, Math.floor((left + 1e-9) / per)))
   }
@@ -95,18 +105,30 @@ export class DataForSeoClient {
   /** Google Shopping search for a keyword (depth = number of results; billed per 100). */
   async products(keyword: string, depth = 100): Promise<TaskOutcome<DfsShoppingItem[]>> {
     const tag = slugify(keyword)
-    const items = await this.run<DfsShoppingItem>('products', [{ tag, body: { keyword, depth } }])
+    const items = await this.run<DfsShoppingItem>('products', [{ tag, body: { keyword, depth } }], serpsFor(depth))
     const r = items.get(tag)
     if (!r) return { result: null, error: 'not posted (budget)' }
     return { result: r.result ?? [], error: r.error }
   }
 
-  private async run<T>(endpoint: Endpoint, jobs: Array<{ tag: string; body: Record<string, unknown> }>): Promise<Map<string, { result: T[] | null; error?: string }>> {
+  /**
+   * Several Google Shopping searches, one task each, posted in batches of up to 100.
+   * Each job's tag is the caller's key (and, in fixture mode, the fixture file name).
+   * Tags skipped for budget are absent from the map and listed in skippedForBudget.
+   */
+  async productsMany(jobs: Array<{ tag: string; keyword: string }>, depth = SERP_SIZE): Promise<Map<string, TaskOutcome<DfsShoppingItem[]>>> {
+    const items = await this.run<DfsShoppingItem>('products', jobs.map((j) => ({ tag: j.tag, body: { keyword: j.keyword, depth } })), serpsFor(depth))
+    const out = new Map<string, TaskOutcome<DfsShoppingItem[]>>()
+    for (const [tag, r] of items) out.set(tag, { result: r.result ?? (r.error ? null : []), error: r.error })
+    return out
+  }
+
+  private async run<T>(endpoint: Endpoint, jobs: Array<{ tag: string; body: Record<string, unknown> }>, units = 1): Promise<Map<string, { result: T[] | null; error?: string }>> {
     const out = new Map<string, { result: T[] | null; error?: string }>()
     const taskIds = new Map<string, string>()
     for (let i = 0; i < jobs.length; i += BATCH) {
       let batch = jobs.slice(i, i + BATCH)
-      const fit = this.affordable(endpoint, batch.length)
+      const fit = this.affordable(endpoint, batch.length, units)
       if (fit < batch.length) {
         for (const j of jobs.slice(i + fit)) this.skippedForBudget.push(j.tag)
         batch = batch.slice(0, fit)
@@ -114,7 +136,7 @@ export class DataForSeoClient {
         if (!batch.length) break
       }
       if (this.opts.fixtureDir) {
-        this.spent += this.estimate(endpoint, batch.length)
+        this.spent += this.estimate(endpoint, batch.length, units)
         this.tasksPosted += batch.length
         for (const j of batch) taskIds.set(j.tag, `fixture:${j.tag}`)
         if (fit < Math.min(BATCH, jobs.length - i)) break
@@ -135,7 +157,7 @@ export class DataForSeoClient {
       if (!batchCost && typeof env.cost === 'number') batchCost = env.cost
       this.spent += batchCost
       this.tasksPosted += posted
-      if (posted) this.observedCost[endpoint] = Math.max(batchCost / posted, ESTIMATED_COST[endpoint] / 10)
+      if (posted) this.observedCost[endpoint] = Math.max(batchCost / posted / units, ESTIMATED_COST[endpoint] / 10)
       if (fit < Math.min(BATCH, jobs.length - i)) break
     }
     if (taskIds.size) this.log(`DataForSEO ${endpoint}: ${taskIds.size} task(s) posted, $${this.spent.toFixed(4)} spent so far${this.simulated ? ' (simulated)' : ''}`)

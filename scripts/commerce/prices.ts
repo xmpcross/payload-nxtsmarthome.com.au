@@ -5,8 +5,12 @@
  *
  *   prices.sh search "<query>" [--limit 10] [--max-cost 1]
  *   prices.sh refresh [--product <slug>] [--limit N] [--write] [--drop-stale] [--max-cost 1]
+ *   prices.sh link [--inactive|--all] [--product <slug>] [--limit N] [--write] [--max-cost 1]
  *   prices.sh zenrows [--product <slug>] [--retailer "JB Hi-Fi"] [--verify|--fill] [--limit N] [--write] [--max-requests 50]
  *   prices.sh report
+ *
+ * refresh / link / zenrows consider active products by default; --inactive selects only
+ * products with active = false and --all selects both.
  *
  * Global: --fixture <dir> reads recorded API responses from disk instead of calling
  * DataForSEO / ZenRows (Payload is still read). --write is refused in fixture mode.
@@ -16,16 +20,17 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { Payload } from 'payload'
 import { ZENROWS_RETAILERS, hostAllowed, matchRetailer, resolveMerchants, retailerByName, retailerByUrl, type AuRetailer, type MerchantRef } from './lib/au-retailers'
-import { DataForSeoClient, slugify, spec, type DfsProductInfo } from './lib/dataforseo'
+import { DataForSeoClient, PUBLISHED_COST, SERP_SIZE, serpsFor, spec, type DfsProductInfo } from './lib/dataforseo'
 import { extractPrice, extractSearchResults } from './lib/extract-price'
-import { findInCatalogue, identityMatch } from './lib/match'
+import { chooseLink, linkQuery, summariseLinks, type LinkResult } from './lib/link'
+import { findInCatalogue, identityMatch, normaliseGtin } from './lib/match'
 import { planProduct, summarise, type Change, type Observation, type ProductPlan } from './lib/plan'
-import { acquireLock, latestReport, renderMarkdown, saveReport, type FillCandidate, type RunReport, type SearchCandidate } from './lib/report'
-import { applyPlans, loadCatalogue, loadMerchants, type CatalogueProduct } from './lib/store'
+import { acquireLock, latestReport, renderMarkdown, saveReport, type CostEstimate, type FillCandidate, type RunReport, type SearchCandidate } from './lib/report'
+import { applyLinks, applyPlans, loadCatalogue, loadMerchants, type CatalogueProduct } from './lib/store'
 import { RequestBudgetExceeded, ZenRowsClient } from './lib/zenrows'
 
 // ---------------------------------------------------------------- arguments
-const BOOLEAN_FLAGS = new Set(['write', 'drop-stale', 'verify', 'fill', 'help'])
+const BOOLEAN_FLAGS = new Set(['write', 'drop-stale', 'verify', 'fill', 'help', 'inactive', 'all'])
 function parseArgs(argv: string[]) {
   const positional: string[] = []
   const flags = new Map<string, string | true>()
@@ -60,11 +65,15 @@ const USAGE = `Usage: prices.sh <command> [options]
   search "<query>" [--limit 10]               Google Shopping candidates (report only, never writes)
   refresh [--product slug] [--limit N]         DataForSEO product_info by googleProductId
           [--write] [--drop-stale] [--max-cost 1]
+  link [--product slug] [--limit N]            Find the Google Shopping product id for products without one
+          [--write] [--max-cost 1]             (--write sets googleProductId on MATCHED products only)
   zenrows [--product slug] [--retailer name]   Verify offer prices on retailer pages (--verify, default)
           [--verify] [--fill] [--limit N]      and/or fill missing supported retailers (--fill)
           [--write] [--max-requests 50]
   report                                       Show the last saved run report
 
+  --inactive        refresh/link/zenrows: only products with active = false (default: active only)
+  --all             refresh/link/zenrows: active and inactive products
   --fixture <dir>   read recorded API responses from <dir> (offline; --write refused)
   --timeout-min N   DataForSEO task polling timeout (default 25)
 Reports: app/scratch/price-runs/. Nothing is saved to Payload without --write.`
@@ -82,6 +91,15 @@ const checkedAt = (p: CatalogueProduct) => (typeof p.sourceData.pricesCheckedAt 
 /** Least recently checked first, so a limited (or cron) run works through the catalogue. */
 const byOldestCheck = (a: CatalogueProduct, b: CatalogueProduct) => checkedAt(a) - checkedAt(b) || a.id - b.id
 
+type Scope = 'active' | 'inactive' | 'all'
+/** --inactive / --all widen the selection; the default stays active products only. */
+function scope(): Scope {
+  if (flags.has('inactive') && flags.has('all')) throw new Error('use either --inactive or --all, not both')
+  return flags.has('all') ? 'all' : flags.has('inactive') ? 'inactive' : 'active'
+}
+const inScope = (p: CatalogueProduct, s: Scope = scope()) => s === 'all' || (s === 'active' ? p.active : !p.active)
+
+/** Products in scope that pass `filter`, least recently checked first; --product picks one slug regardless of scope. */
 function selectProducts(catalogue: CatalogueProduct[], filter: (p: CatalogueProduct) => boolean, limit: number): CatalogueProduct[] {
   const slug = str('product')
   if (slug) {
@@ -89,7 +107,7 @@ function selectProducts(catalogue: CatalogueProduct[], filter: (p: CatalogueProd
     if (!p) throw new Error(`No product with slug "${slug}"`)
     return [p]
   }
-  const list = catalogue.filter((p) => p.active && filter(p)).sort(byOldestCheck)
+  const list = catalogue.filter((p) => inScope(p) && filter(p)).sort(byOldestCheck)
   return limit ? list.slice(0, limit) : list
 }
 
@@ -145,6 +163,7 @@ async function refresh(payload: Payload, report: RunReport) {
   const targets = selectProducts(catalogue, (p) => Boolean(p.googleProductId) && hasFixture(p), num('limit', 0))
   if (str('product') && !targets[0].googleProductId) throw new Error(`${targets[0].slug} has no googleProductId; refresh looks products up by id`)
   if (fixtureDir) report.warnings.push('Fixture mode: only products with a recorded product_info response are considered')
+  if (scope() !== 'active') report.warnings.push(`Scope: ${scope()} products. Offers are added/updated as usual; product active flags are never changed.`)
   const dfs = dfsClient()
   log(`refresh: ${targets.length} product(s), estimated $${dfs.estimate('product_info', targets.length).toFixed(4)} (budget $${maxCost})`)
   const results = await dfs.productInfo(targets.map((p) => p.googleProductId!))
@@ -155,9 +174,14 @@ async function refresh(payload: Payload, report: RunReport) {
     const item = r?.result ?? null
     let note: string | undefined
     let observations: Observation[] = [], skips: Change[] = []
+    let gtinMismatch = false
     if (!r) note = 'not looked up: --max-cost budget reached'
     else if (!item) note = `no result (${r.error ?? 'empty'}); product left as it is`
-    else {
+    else if (p.gtin && normaliseGtin(spec(item, 'GTIN', 'EAN', 'UPC', 'GTIN-13')) && normaliseGtin(spec(item, 'GTIN', 'EAN', 'UPC', 'GTIN-13')) !== normaliseGtin(p.gtin)) {
+      // The linked Google product states a different barcode: its sellers are not this product's.
+      note = `GTIN mismatch: Google product ${p.googleProductId} has GTIN ${spec(item, 'GTIN', 'EAN', 'UPC', 'GTIN-13')}, the product has ${p.gtin}; nothing changed. Check its googleProductId.`
+      gtinMismatch = true
+    } else {
       const s = sellerObservations(item, lookup)
       observations = s.observations; skips = s.skips
       if (!observations.length) note = 'no AU retailer offers in the result; nothing changed'
@@ -165,7 +189,7 @@ async function refresh(payload: Payload, report: RunReport) {
     }
     const plan = planProduct(p, observations, { now, checkStale: true, dropStale: flags.has('drop-stale') && Boolean(item), note })
     plan.changes.push(...skips)
-    plan.observed = Boolean(item)
+    plan.observed = Boolean(item) && !gtinMismatch
     plans.push(plan)
   }
   report.cost.dataforseo = dfsCost(dfs, maxCost)
@@ -174,6 +198,56 @@ async function refresh(payload: Payload, report: RunReport) {
   report.plans = plans
   report.summary = summarise(plans)
   if (write) report.written = await applyPlans(payload, plans, catalogue, now)
+}
+
+// ---------------------------------------------------------------- link
+async function link(payload: Payload, report: RunReport) {
+  const maxCost = num('max-cost', 1)
+  const depth = num('depth', SERP_SIZE)
+  const merchants = await loadMerchants(payload)
+  const catalogue = await loadCatalogue(payload, merchants)
+  const hasFixture = (p: CatalogueProduct) => !fixtureDir || fs.existsSync(path.join(fixtureDir, 'dataforseo', 'products', `${p.slug}.json`))
+  const targets = selectProducts(catalogue, (p) => !p.googleProductId && hasFixture(p), num('limit', 0))
+  if (str('product') && targets[0].googleProductId) throw new Error(`${targets[0].slug} already has googleProductId ${targets[0].googleProductId}; link only fills missing ids`)
+  if (fixtureDir) report.warnings.push('Fixture mode: only products with a recorded Shopping search (dataforseo/products/<slug>.json) are considered')
+  const scopeCount = catalogue.filter((p) => inScope(p) && !p.googleProductId).length
+  const linkedIds = new Map(catalogue.filter((p) => p.googleProductId).map((p) => [p.googleProductId!, p.slug]))
+
+  const dfs = dfsClient()
+  const serps = serpsFor(depth)
+  const searchUsd = targets.length * serps * PUBLISHED_COST.products
+  const infoUsd = targets.length * PUBLISHED_COST.product_info
+  const perProduct = serps * PUBLISHED_COST.products + PUBLISHED_COST.product_info
+  const estimate: CostEstimate = {
+    products: targets.length, searches: targets.length, serpsPerSearch: serps, searchUsd, productInfoUsdMax: infoUsd, totalUsdMax: searchUsd + infoUsd,
+    guardUsd: dfs.estimate('products', targets.length, serps), scopeProducts: scopeCount, scopeTotalUsdMax: scopeCount * perProduct,
+    basis: `DataForSEO Standard queue: Products $${PUBLISHED_COST.products}/SERP of ${SERP_SIZE} results, Product Info $${PUBLISHED_COST.product_info}/product (dataforseo.com/pricing, checked 2026-10-17)`,
+  }
+  log(`link: ${targets.length} product(s) without a googleProductId (${scope()} scope; ${scopeCount} in the whole scope)`)
+  log(`  cost estimate: ${targets.length} search(es) x ${serps} SERP = $${searchUsd.toFixed(4)} now; the follow-up refresh adds up to $${infoUsd.toFixed(4)} of product_info; total up to $${estimate.totalUsdMax.toFixed(4)}`)
+  log(`  whole scope (${scopeCount} product(s)): up to $${estimate.scopeTotalUsdMax.toFixed(4)}; budget guard for this run $${estimate.guardUsd.toFixed(4)} of --max-cost $${maxCost}`)
+
+  const jobs = targets.map((p) => ({ tag: p.slug, keyword: linkQuery(p) }))
+  const found = targets.length ? await dfs.productsMany(jobs, depth) : new Map()
+  const results: LinkResult[] = targets.map((p, i) => {
+    const r = found.get(p.slug)
+    const base = { productId: p.id, slug: p.slug, name: p.name, brand: p.brand, query: jobs[i].keyword, candidates: [] }
+    if (!r) return { ...base, status: 'not-searched' as const, reason: 'not searched: --max-cost budget reached' }
+    if (!r.result) return { ...base, status: 'error' as const, reason: `search failed: ${r.error ?? 'no result'}` }
+    return chooseLink(p, r.result, { linkedIds, query: jobs[i].keyword })
+  })
+  // Two products in this run claiming the same Google product: neither is certain.
+  const claims = new Map<string, LinkResult[]>()
+  for (const r of results) if (r.status === 'matched') claims.set(r.googleProductId!, [...(claims.get(r.googleProductId!) ?? []), r])
+  for (const [id, list] of claims) {
+    if (list.length < 2) continue
+    for (const r of list) { r.status = 'ambiguous'; r.reason = `Google product ${id} also matched ${list.filter((x) => x !== r).map((x) => x.slug).join(', ')} in this run` }
+  }
+
+  report.cost.dataforseo = dfsCost(dfs, maxCost)
+  if (dfs.skippedForBudget.length) report.warnings.push(`${dfs.skippedForBudget.length} product(s) not searched because of --max-cost $${maxCost}`)
+  if (write) report.linkWritten = await applyLinks(payload, results, new Date())
+  report.link = { summary: summariseLinks(results), estimate, results }
 }
 
 // ---------------------------------------------------------------- zenrows
@@ -333,7 +407,7 @@ async function search(payload: Payload, report: RunReport) {
 
 // ---------------------------------------------------------------- main
 async function main(): Promise<number> {
-  if (!command || flags.has('help') || !['search', 'refresh', 'zenrows', 'report'].includes(command)) {
+  if (!command || flags.has('help') || !['search', 'refresh', 'link', 'zenrows', 'report'].includes(command)) {
     console.log(USAGE)
     return command && !flags.has('help') ? 1 : 0
   }
@@ -346,7 +420,7 @@ async function main(): Promise<number> {
   }
   if (write && fixtureDir) throw new Error('--write is refused in --fixture mode: fixture data is synthetic and must never reach Payload')
   if (!fixtureDir) {
-    if ((command === 'refresh' || command === 'search') && (!process.env.DATAFORSEO_LOGIN || !process.env.DATAFORSEO_PASSWORD))
+    if ((command === 'refresh' || command === 'search' || command === 'link') && (!process.env.DATAFORSEO_LOGIN || !process.env.DATAFORSEO_PASSWORD))
       throw new Error('DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD are not set in app/.env.local (or run with --fixture <dir>)')
     if (command === 'zenrows' && !process.env.ZENROWS_API_KEY)
       throw new Error('ZENROWS_API_KEY is not set in app/.env.local (or run with --fixture <dir>)')
@@ -362,13 +436,15 @@ async function main(): Promise<number> {
     payload = await getPayload({ config })
     if (command === 'refresh') await refresh(payload, report)
     else if (command === 'zenrows') await zenrows(payload, report, manifest)
+    else if (command === 'link') await link(payload, report)
     else await search(payload, report)
-    if (report.written?.errors.length) code = 1
+    if (report.written?.errors.length || report.linkWritten?.errors.length) code = 1
   } finally {
     report.finishedAt = new Date().toISOString()
     const saved = saveReport(report)
     console.log(renderMarkdown(report))
     if (!write && report.plans?.some((p) => p.changes.some((c) => c.kind !== 'skip' && c.kind !== 'hold'))) console.log('Review only: nothing was saved to Payload. Re-run with --write to apply.')
+    if (!write && report.link?.summary.matched) console.log('Review only: no googleProductId was saved. Re-run with --write to link the MATCHED products.')
     console.log(`Report saved: ${saved.md}\n              ${saved.json}`)
     release()
     if (payload) await payload.destroy()

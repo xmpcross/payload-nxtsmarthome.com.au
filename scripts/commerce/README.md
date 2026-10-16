@@ -37,9 +37,16 @@ Shopping search through DataForSEO (`merchant/google/products`), then calls
 scripts/prices.sh search "aqara hub" --limit 5
 ```
 
-### `refresh [--product slug] [--limit N] [--write] [--drop-stale] [--max-cost 1]`
+### Scope: `--inactive` and `--all`
 
-Calls DataForSEO `product_info` for each active product that has a `googleProductId`.
+`refresh`, `link` and `zenrows` consider **active** products by default. `--inactive`
+selects only products with `active = false` (for example the Amazon AU imports), and
+`--all` selects both. `--product <slug>` picks one product whatever its scope. These
+flags only choose products: no command ever changes a product's `active` flag.
+
+### `refresh [--inactive|--all] [--product slug] [--limit N] [--write] [--drop-stale] [--max-cost 1]`
+
+Calls DataForSEO `product_info` for each product in scope that has a `googleProductId`.
 Products whose prices were checked least recently go first, so `--limit` (or a cron
 job) works through the whole catalogue over successive runs. For each AU retailer it
 finds:
@@ -57,6 +64,10 @@ Offers are never deleted or deactivated, inactive offers are never reactivated, 
 Merchants are never created. A retailer with no Merchant record (for example Costco
 AU) is reported and skipped.
 
+If the product has a GTIN (in `sourceData.gtin`, its specifications or the Amazon
+`productInformation`) and the Google product states a different one, nothing is planned
+for that product and the report says to check its `googleProductId`.
+
 On `--write`, each checked product gets `sourceData.pricesCheckedAt`, which the
 "Last price update" line reads. Its `priceAud` is then recalculated from the offers
 now in the database, as the lowest active offer price.
@@ -68,7 +79,39 @@ scripts/prices.sh refresh --limit 20 --write             # apply
 scripts/prices.sh refresh --write --drop-stale --max-cost 0.5
 ```
 
-### `zenrows [--product slug] [--retailer name] [--verify|--fill] [--limit 10] [--write] [--max-requests 50]`
+### `link [--inactive|--all] [--product slug] [--limit N] [--write] [--max-cost 1]`
+
+Finds the Google Shopping product id for products in scope that have **no**
+`googleProductId`, so that `refresh` can then look up their other AU retailers. It posts
+one DataForSEO Google Shopping search per product (`merchant/google/products`, AU
+location 2036, English, depth 40 = one billed SERP), up to 100 tasks per `task_post`.
+
+The query is the brand plus the product's distinctive model tokens (`lib/match.ts`
+`distinctiveModelTokens`: model-number-like tokens without spec tokens such as `2k`,
+`1080p`, `5ghz`, `ip65`). When the name has none, the model number from the
+specifications (`Item model number`, `Model`, …) is used; failing that, brand + name.
+A brand such as "eufy Security" is searched and matched as "eufy" too.
+
+Each result is checked with `identityMatch` (an identical GTIN, or the brand plus every
+distinctive model token with no variant/accessory word the product lacks):
+
+| Outcome | When | Written with `--write` |
+|---|---|---|
+| `matched` (`high`/`medium`) | every matching result is the same Google product id. Short model tokens (under 3 characters) also need 60% of the name's other words in the title; `medium` = short token or lower name coverage | `googleProductId`, and `sourceData.googleLink = {matchedAt, title, reason, query, confidence, by}` merged into the existing `sourceData` |
+| `ambiguous` | several different Google products match; a short-token match without the rest of the name; the id is already linked to another product; or two products in the run claim the same id | nothing |
+| `no match` | no result matches, the product has no model number and no GTIN, or the matching listing has no Google product id | nothing |
+
+The report lists up to five candidates per product with the reason each was rejected.
+No other product field is sent, and a product that gained an id in the meantime is left
+alone. Before posting, the command prints a cost estimate (see Budgets).
+
+```bash
+scripts/prices.sh link --inactive --limit 3                 # review 3
+scripts/prices.sh link --inactive --write --max-cost 0.5     # link all unlinked inactive products
+scripts/prices.sh refresh --inactive --write --max-cost 0.5  # then add their other AU retailers
+```
+
+### `zenrows [--inactive|--all] [--product slug] [--retailer name] [--verify|--fill] [--limit 10] [--write] [--max-requests 50]`
 
 Fetches retailer pages through ZenRows (AU premium proxy). Six retailers are supported:
 Amazon AU, JB Hi-Fi, Harvey Norman, The Good Guys, eBay AU and Bunnings.
@@ -112,16 +155,24 @@ value that is not an object is left alone and reported.
   `verifiedPrice`. When `--drop-stale` clears a price, it also records
   `staleClearedAt` and `clearedPriceAud`.
 - `product.sourceData.pricesCheckedAt`
+- `product.googleProductId` and `product.sourceData.googleLink` (`link --write`, matched only)
 
 All writes pass `context: { skipRevalidation: true }`. Product pages revalidate every
 5 minutes, so no deploy is needed.
 
 ## Budgets and safety
 
+- DataForSEO's published Standard-queue prices (dataforseo.com/pricing, checked
+  2026-10-17): Google Shopping **Products $0.001 per SERP** of up to 40 results (depth
+  41–80 is 2 SERPs; `search` uses depth 100 = 3 SERPs), **Product Info $0.001 per
+  product**. The priority queue costs double and is not used.
 - `--max-cost` (USD, default 1) caps DataForSEO spending. Before each `task_post` it
-  estimates the cost (about $0.0015 per task, refined from the real `cost` once one
-  batch has been posted) and posts only what fits. Products that were not looked up
-  are listed in the report.
+  estimates the cost (the published price plus a 50% margin, $0.0015 per unit, refined
+  from the real `cost` once one batch has been posted) and posts only what fits.
+  Products that were not looked up are listed in the report.
+- Linking every inactive product: 184 × ($0.001 search + $0.001 product_info) =
+  **about $0.37** at published prices (the budget guard counts up to $0.55). `link`
+  prints this for its own scope before posting.
 - `--max-requests` (default 50) caps ZenRows calls. Credits are summed from the
   `X-Request-Cost` header. Checks that were skipped are listed in the report.
 - A lock file (`app/scratch/price-runs/prices.lock`) stops two runs from overlapping.
@@ -146,7 +197,8 @@ scripts/prices.sh search "aqara hub" --fixture app/scripts/commerce/fixtures
 Its layout:
 
 - `dataforseo/product_info/<googleProductId>.json` and
-  `dataforseo/products/<keyword-slug>.json` contain `task_get/advanced` envelopes.
+  `dataforseo/products/<keyword-slug>.json` (for `search`) and
+  `dataforseo/products/<product slug>.json` (for `link`) contain `task_get/advanced` envelopes.
 - `zenrows/*.html` contains retailer pages. `manifest.json` maps them by
   `<product|search>:<Retailer>:<product slug>`.
 
@@ -175,7 +227,9 @@ If the catalogue changes, a fixture diff may change too.
 cd app && ./node_modules/.bin/tsx --test scripts/commerce/tests/*.test.ts
 ```
 
-The tests cover `parseAud`/`extractPrice` (every fixture format), the retailer
+`tests/link.test.ts` covers the link decision against `fixtures/dataforseo/products/fixture-link-*.json`
+(matched, ambiguous, no match), GTIN and short-model cases, query building and the
+per-SERP budget guard. `tests/prices.test.ts` covers `parseAud`/`extractPrice` (every fixture format), the retailer
 matcher, identity matching, and the plan rules (update, add, hold, stale,
 `--drop-stale`, skips, de-duplication, product price, `sourceData` merge).
 
@@ -202,6 +256,7 @@ The exit code is non-zero on errors, including failed writes.
   `--max-requests`
 - `lib/extract-price.ts`: price and search-result extraction from HTML (pure)
 - `lib/match.ts`: identity matching on brand plus model, or GTIN (pure)
+- `lib/link.ts`: the `link` query and matched/ambiguous/no-match decision (pure)
 - `lib/plan.ts`: the diff and plan rules (pure)
 - `lib/store.ts`: Payload reads, and writes with `--write`
 - `lib/report.ts`: JSON and Markdown reports, and the run lock

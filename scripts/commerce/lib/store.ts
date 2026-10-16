@@ -8,12 +8,15 @@
 import type { Payload } from 'payload'
 import type { Change, PlanOffer, PlanProduct, ProductPlan } from './plan'
 import { mergeSourceData } from './plan'
+import type { LinkResult } from './link'
 
 export interface CatalogueProduct extends PlanProduct {
   brand: string | null
   active: boolean
   googleProductId: string | null
   gtin: string | null
+  /** Model number from specifications / sourceData.productInformation (Amazon imports), if any. */
+  modelNumber: string | null
 }
 
 export interface MerchantRow { id: number; name: string; active: boolean | null | undefined }
@@ -21,6 +24,33 @@ export interface MerchantRow { id: number; name: string; active: boolean | null 
 const context = { skipRevalidation: true }
 const asObject = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {})
 const idOf = (v: unknown): number => (typeof v === 'object' && v ? Number((v as { id: unknown }).id) : Number(v))
+
+const GTIN_NAMES = ['gtin', 'gtin13', 'gtin 13', 'gtin-13', 'ean', 'upc', 'global trade identification number', 'barcode', 'isbn 13']
+const MODEL_NAMES = ['item model number', 'model number', 'model', 'model name', 'manufacturer part number', 'part number', 'mpn']
+const keyOf = (s: unknown) => String(s ?? '').toLowerCase().replace(/[\u200e\u200f:]/g, '').replace(/\s+/g, ' ').trim()
+
+/** Name/value pairs from a specifications array ([{name, value}] or similar) or a plain object. */
+function pairs(v: unknown): Array<[string, string]> {
+  const out: Array<[string, string]> = []
+  if (Array.isArray(v)) {
+    for (const row of v) {
+      if (!row || typeof row !== 'object') continue
+      const r = row as Record<string, unknown>
+      const name = r.name ?? r.title ?? r.label ?? r.specification_name ?? r.key
+      const value = r.value ?? r.body ?? r.text ?? r.specification_value
+      if (name != null && (typeof value === 'string' || typeof value === 'number')) out.push([keyOf(name), String(value).trim()])
+    }
+  } else if (v && typeof v === 'object') {
+    for (const [k, value] of Object.entries(v)) if (typeof value === 'string' || typeof value === 'number') out.push([keyOf(k), String(value).trim()])
+  }
+  return out
+}
+
+/** First value for one of `names` across the given sources. */
+export function specValue(sources: unknown[], names: string[]): string | null {
+  for (const src of sources) for (const [k, v] of pairs(src)) if (names.includes(k) && v) return v
+  return null
+}
 
 export async function loadMerchants(payload: Payload): Promise<MerchantRow[]> {
   const res = await payload.find({ collection: 'merchants', limit: 0, pagination: false, depth: 0, overrideAccess: true })
@@ -50,7 +80,9 @@ export async function loadCatalogue(payload: Payload, merchants: MerchantRow[]):
     return {
       id: p.id, slug: p.slug, name: p.name, brand: p.brand ?? null, active: p.active !== false,
       googleProductId: p.googleProductId ? String(p.googleProductId) : null,
-      gtin: typeof sd.gtin === 'string' || typeof sd.gtin === 'number' ? String(sd.gtin) : null,
+      gtin: typeof sd.gtin === 'string' || typeof sd.gtin === 'number' ? String(sd.gtin)
+        : specValue([p.specifications, sd.productInformation, sd.details], GTIN_NAMES),
+      modelNumber: specValue([p.specifications, sd.productInformation, sd.details], MODEL_NAMES),
       priceAud: typeof p.priceAud === 'number' ? p.priceAud : null, sourceData: sd, offers: byProduct.get(p.id) ?? [],
     }
   })
@@ -130,6 +162,34 @@ export async function applyPlans(payload: Payload, plans: ProductPlan[], catalog
       }
     } catch (e) {
       out.errors.push(`${plan.slug} product: ${(e as Error).message}`)
+    }
+  }
+  return out
+}
+
+export interface LinkWriteResult { linked: number; errors: string[] }
+
+/**
+ * Writes googleProductId (and sourceData.googleLink, merged into the existing sourceData) for
+ * MATCHED link results only. Nothing else on the product is sent. A product that gained a
+ * googleProductId since it was read is left alone.
+ */
+export async function applyLinks(payload: Payload, results: LinkResult[], now: Date): Promise<LinkWriteResult> {
+  const out: LinkWriteResult = { linked: 0, errors: [] }
+  for (const r of results) {
+    if (r.status !== 'matched' || !r.googleProductId) continue
+    try {
+      const fresh = await payload.findByID({ collection: 'products', id: r.productId, depth: 0, overrideAccess: true })
+      if (fresh.googleProductId) { out.errors.push(`${r.slug}: already has googleProductId ${fresh.googleProductId}; not changed`); continue }
+      const sourceData = mergeSourceData(fresh.sourceData, {
+        googleLink: { matchedAt: now.toISOString(), title: r.title, reason: r.reason, query: r.query, confidence: r.confidence, by: r.by },
+      })
+      if (!sourceData) { out.errors.push(`${r.slug}: product sourceData is not an object; not linked`); continue }
+      await payload.update({ collection: 'products', id: r.productId, data: { googleProductId: r.googleProductId, sourceData }, depth: 0, overrideAccess: true, context })
+      r.written = true
+      out.linked++
+    } catch (e) {
+      out.errors.push(`${r.slug} link: ${(e as Error).message}`)
     }
   }
   return out

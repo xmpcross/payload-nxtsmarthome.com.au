@@ -1,0 +1,116 @@
+{
+  "_fixture": "SYNTHETIC FIXTURE - hand-written test data shaped like a DataForSEO merchant/google/products task_get/advanced response. Titles, ids, prices and sellers are invented; never write them to Payload.",
+  "_scenario": "link: MATCHED - one Google product has the brand + model; an accessory listing and a different model are rejected",
+  "version": "0.1.20250101",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "cost": 0,
+  "tasks_count": 1,
+  "tasks": [
+    {
+      "id": "fixture-fixture-link-eufy-indoor-cam-e220",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "cost": 0,
+      "result_count": 1,
+      "data": {
+        "tag": "fixture-link-eufy-indoor-cam-e220"
+      },
+      "result": [
+        {
+          "keyword": "eufy E220",
+          "location_code": 2036,
+          "language_code": "en",
+          "items_count": 5,
+          "items": [
+            {
+              "type": "google_shopping_serp",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "position": "left",
+              "title": "eufy Security Indoor Cam E220 2K Pan & Tilt Camera",
+              "url": null,
+              "shopping_url": null,
+              "price": 59.0,
+              "old_price": null,
+              "currency": "AUD",
+              "product_id": "9900000000000000001",
+              "data_docid": "8001",
+              "seller": "JB Hi-Fi",
+              "reviews_count": null,
+              "product_rating": null
+            },
+            {
+              "type": "google_shopping_serp",
+              "rank_group": 2,
+              "rank_absolute": 2,
+              "position": "left",
+              "title": "eufy Security Indoor Cam E220 2K Pan & Tilt Camera",
+              "url": null,
+              "shopping_url": null,
+              "price": 62.0,
+              "old_price": null,
+              "currency": "AUD",
+              "product_id": "9900000000000000001",
+              "data_docid": "8002",
+              "seller": "Amazon AU - Amazon.com.au",
+              "reviews_count": null,
+              "product_rating": null
+            },
+            {
+              "type": "google_shopping_serp",
+              "rank_group": 3,
+              "rank_absolute": 3,
+              "position": "left",
+              "title": "Wall Mount Bracket for eufy Indoor Cam E220",
+              "url": null,
+              "shopping_url": null,
+              "price": 14.99,
+              "old_price": null,
+              "currency": "AUD",
+              "product_id": "9900000000000000002",
+              "data_docid": "8003",
+              "seller": "eBay - gadgetsau",
+              "reviews_count": null,
+              "product_rating": null
+            },
+            {
+              "type": "google_shopping_serp",
+              "rank_group": 4,
+              "rank_absolute": 4,
+              "position": "left",
+              "title": "eufy Security Indoor Cam C220 2K",
+              "url": null,
+              "shopping_url": null,
+              "price": 45.0,
+              "old_price": null,
+              "currency": "AUD",
+              "product_id": "9900000000000000003",
+              "data_docid": "8004",
+              "seller": "Bunnings Warehouse",
+              "reviews_count": null,
+              "product_rating": null
+            },
+            {
+              "type": "google_shopping_serp",
+              "rank_group": 5,
+              "rank_absolute": 5,
+              "position": "left",
+              "title": "eufy Security Indoor Cam E220 2K Compatible with Alexa",
+              "url": null,
+              "shopping_url": null,
+              "price": 59.0,
+              "old_price": null,
+              "currency": "AUD",
+              "product_id": "9900000000000000001",
+              "data_docid": "8005",
+              "seller": "The Good Guys",
+              "reviews_count": null,
+              "product_rating": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

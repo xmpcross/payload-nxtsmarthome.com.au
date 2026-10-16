@@ -1,0 +1,99 @@
+{
+  "_fixture": "SYNTHETIC FIXTURE - hand-written test data shaped like a DataForSEO merchant/google/products task_get/advanced response. Titles, ids, prices and sellers are invented; never write them to Payload.",
+  "_scenario": "link: NO MATCH - only other models and other brands come back",
+  "version": "0.1.20250101",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "cost": 0,
+  "tasks_count": 1,
+  "tasks": [
+    {
+      "id": "fixture-fixture-link-aqara-smart-lock-u200",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "cost": 0,
+      "result_count": 1,
+      "data": {
+        "tag": "fixture-link-aqara-smart-lock-u200"
+      },
+      "result": [
+        {
+          "keyword": "Aqara U200",
+          "location_code": 2036,
+          "language_code": "en",
+          "items_count": 4,
+          "items": [
+            {
+              "type": "google_shopping_serp",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "position": "left",
+              "title": "Aqara Smart Lock U100 Fingerprint Keyless Entry",
+              "url": null,
+              "shopping_url": null,
+              "price": 299.0,
+              "old_price": null,
+              "currency": "AUD",
+              "product_id": "9900000000000000021",
+              "data_docid": "8021",
+              "seller": "JB Hi-Fi",
+              "reviews_count": null,
+              "product_rating": null
+            },
+            {
+              "type": "google_shopping_serp",
+              "rank_group": 2,
+              "rank_absolute": 2,
+              "position": "left",
+              "title": "Aqara Smart Lock U50",
+              "url": null,
+              "shopping_url": null,
+              "price": 199.0,
+              "old_price": null,
+              "currency": "AUD",
+              "product_id": "9900000000000000022",
+              "data_docid": "8022",
+              "seller": "Bunnings Warehouse",
+              "reviews_count": null,
+              "product_rating": null
+            },
+            {
+              "type": "google_shopping_serp",
+              "rank_group": 3,
+              "rank_absolute": 3,
+              "position": "left",
+              "title": "Yale Assure Lock 2 Touch",
+              "url": null,
+              "shopping_url": null,
+              "price": 449.0,
+              "old_price": null,
+              "currency": "AUD",
+              "product_id": "9900000000000000023",
+              "data_docid": "8023",
+              "seller": "Harvey Norman",
+              "reviews_count": null,
+              "product_rating": null
+            },
+            {
+              "type": "google_shopping_serp",
+              "rank_group": 4,
+              "rank_absolute": 4,
+              "position": "left",
+              "title": "Aqara Smart Lock U200 Pro Kit",
+              "url": null,
+              "shopping_url": null,
+              "price": 549.0,
+              "old_price": null,
+              "currency": "AUD",
+              "product_id": "9900000000000000024",
+              "data_docid": "8024",
+              "seller": "Desertcart AU",
+              "reviews_count": null,
+              "product_rating": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

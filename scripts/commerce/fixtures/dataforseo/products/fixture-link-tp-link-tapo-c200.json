@@ -1,0 +1,82 @@
+{
+  "_fixture": "SYNTHETIC FIXTURE - hand-written test data shaped like a DataForSEO merchant/google/products task_get/advanced response. Titles, ids, prices and sellers are invented; never write them to Payload.",
+  "_scenario": "link: AMBIGUOUS - two different Google products both carry brand + model C200",
+  "version": "0.1.20250101",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "cost": 0,
+  "tasks_count": 1,
+  "tasks": [
+    {
+      "id": "fixture-fixture-link-tp-link-tapo-c200",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "cost": 0,
+      "result_count": 1,
+      "data": {
+        "tag": "fixture-link-tp-link-tapo-c200"
+      },
+      "result": [
+        {
+          "keyword": "TP-Link C200",
+          "location_code": 2036,
+          "language_code": "en",
+          "items_count": 3,
+          "items": [
+            {
+              "type": "google_shopping_serp",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "position": "left",
+              "title": "TP-Link Tapo C200 Pan/Tilt Home Security Wi-Fi Camera",
+              "url": null,
+              "shopping_url": null,
+              "price": 39.0,
+              "old_price": null,
+              "currency": "AUD",
+              "product_id": "9900000000000000011",
+              "data_docid": "8011",
+              "seller": "Officeworks",
+              "reviews_count": null,
+              "product_rating": null
+            },
+            {
+              "type": "google_shopping_serp",
+              "rank_group": 2,
+              "rank_absolute": 2,
+              "position": "left",
+              "title": "TP-Link Tapo C200 Pan Tilt Home Security Wi-Fi Camera White",
+              "url": null,
+              "shopping_url": null,
+              "price": 42.0,
+              "old_price": null,
+              "currency": "AUD",
+              "product_id": "9900000000000000012",
+              "data_docid": "8012",
+              "seller": "Harvey Norman",
+              "reviews_count": null,
+              "product_rating": null
+            },
+            {
+              "type": "google_shopping_serp",
+              "rank_group": 3,
+              "rank_absolute": 3,
+              "position": "left",
+              "title": "TP-Link Tapo C210 Pan/Tilt Home Security Wi-Fi Camera",
+              "url": null,
+              "shopping_url": null,
+              "price": 49.0,
+              "old_price": null,
+              "currency": "AUD",
+              "product_id": "9900000000000000013",
+              "data_docid": "8013",
+              "seller": "JB Hi-Fi",
+              "reviews_count": null,
+              "product_rating": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

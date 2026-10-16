@@ -6,6 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Change, ProductPlan } from './plan'
 import { summarise } from './plan'
+import type { LinkResult, summariseLinks } from './link'
 
 export const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 export const RUNS_DIR = path.join(APP_DIR, 'scratch', 'price-runs')
@@ -28,6 +29,23 @@ export interface SearchCandidate {
   note?: string
 }
 
+export interface CostEstimate {
+  products: number
+  searches: number
+  serpsPerSearch: number
+  /** At DataForSEO's published Standard-queue prices. */
+  searchUsd: number
+  /** product_info for every product the searches could link (an upper bound for the follow-up refresh). */
+  productInfoUsdMax: number
+  totalUsdMax: number
+  /** Every product in scope with no googleProductId (ignoring --limit), and the same total for all of them. */
+  scopeProducts: number
+  scopeTotalUsdMax: number
+  /** The tool's budget-guard figure (published price + 50% margin) for the searches posted now. */
+  guardUsd: number
+  basis: string
+}
+
 export interface FillCandidate { product: string; retailer: string; title: string; url: string; reason: string; price?: number | null }
 
 export interface RunReport {
@@ -46,6 +64,8 @@ export interface RunReport {
   plans?: ProductPlan[]
   search?: { query: string; candidates: SearchCandidate[] }
   fillCandidates?: FillCandidate[]
+  link?: { summary: ReturnType<typeof summariseLinks>; estimate: CostEstimate; results: LinkResult[] }
+  linkWritten?: { linked: number; errors: string[] }
   written?: { offersUpdated: number; offersAdded: number; pricesCleared: number; productsUpdated: number; errors: string[] }
 }
 
@@ -109,6 +129,33 @@ export function renderMarkdown(r: RunReport): string {
   if (r.written) {
     lines.push('', '## Written to Payload', '', `Offers updated ${r.written.offersUpdated}, offers added ${r.written.offersAdded}, prices cleared ${r.written.pricesCleared}, products updated ${r.written.productsUpdated}.`)
     for (const e of r.written.errors) lines.push(`- ERROR: ${e}`)
+  }
+  if (r.linkWritten) {
+    lines.push('', '## Written to Payload', '', `googleProductId set on ${r.linkWritten.linked} product(s) (plus sourceData.googleLink).`)
+    for (const e of r.linkWritten.errors) lines.push(`- ERROR: ${e}`)
+  }
+  if (r.link) {
+    const e = r.link.estimate, s = r.link.summary
+    lines.push('', '## Cost estimate', '',
+      `- ${e.searches} Google Shopping search(es) x ${e.serpsPerSearch} SERP = $${e.searchUsd.toFixed(4)}`,
+      `- follow-up \`refresh\` product_info for up to ${e.products} linked product(s) = up to $${e.productInfoUsdMax.toFixed(4)}`,
+      `- total up to $${e.totalUsdMax.toFixed(4)} (${e.basis}); budget guard for this run's searches: $${e.guardUsd.toFixed(4)}`,
+      `- whole scope (${e.scopeProducts} unlinked product(s), ignoring --limit): up to $${e.scopeTotalUsdMax.toFixed(4)}`)
+    lines.push('', '## Link summary', '', '| Products | Matched | Ambiguous | No match | Errors | Not searched | Written |', '|---|---|---|---|---|---|---|',
+      `| ${s.products} | ${s.matched} | ${s.ambiguous} | ${s.noMatch} | ${s.errors} | ${s.notSearched} | ${s.written} |`)
+    const groups: Array<[string, LinkResult['status'][]]> = [['Matched', ['matched']], ['Ambiguous (not written)', ['ambiguous']], ['No match (not written)', ['no-match', 'error', 'not-searched']]]
+    for (const [label, statuses] of groups) {
+      const list = r.link.results.filter((x) => statuses.includes(x.status))
+      if (!list.length) continue
+      lines.push('', `## ${label}`, '')
+      for (const x of list) {
+        const head = x.status === 'matched'
+          ? `### ${x.brand ?? ''} ${x.name} (\`${x.slug}\`) → ${x.googleProductId} [${x.confidence}]${x.written ? ' — WRITTEN' : ''}`
+          : `### ${x.brand ?? ''} ${x.name} (\`${x.slug}\`) — ${x.status}`
+        lines.push(head.replace(/\s{2,}/g, ' '), `- query: \`${x.query}\``, `- ${x.status === 'matched' ? `"${x.title}": ` : ''}${x.reason}`)
+        for (const c of x.candidates) lines.push(`  - #${c.rank} ${c.match ? 'MATCH' : 'no'} ${c.title.replace(/\|/g, '/')} (${c.productId ?? 'no product id'}${c.price != null ? `, $${c.price}` : ''}${c.seller ? `, ${c.seller}` : ''})${c.match ? '' : ` — ${c.reason}`}`)
+      }
+    }
   }
   if (r.warnings.length) { lines.push('', '## Warnings', ''); for (const w of r.warnings) lines.push(`- ${w}`) }
   if (r.plans?.length) {
