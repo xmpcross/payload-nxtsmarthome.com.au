@@ -31,7 +31,9 @@ function adsenseRedirects() {
 }
 
 const nextConfig = {
-  experimental: { cpus: 2 },
+  // Build workers (static generation). 4 of the host's 12 cores (user request,
+  // 17 Oct 2026; was 2), leaving room for the live site and the database.
+  experimental: { cpus: 4 },
   // No "x-powered-by: Next.js" header (audit L2): it only advertises the stack.
   poweredByHeader: false,
   ...(staticExport ? { output: 'export' } : {}),
