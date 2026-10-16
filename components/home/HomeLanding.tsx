@@ -4,6 +4,7 @@ import { articleHref, coverFor, formatDate, typeLabels } from '@/lib/content';
 import type { TCategory } from '@/data/categories';
 import type { TopProduct } from '@/lib/products';
 import { responsiveImg } from '@/lib/image';
+import HeroDevices from './HeroDevices';
 
 /**
  * Home page (redesign approved 17 Oct 2026; preview built from the same data).
@@ -162,14 +163,7 @@ export default function HomeLanding({
             </nav>
           </div>
           <figure>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              {...responsiveImg('/images/about/home.webp', 680, '(min-width: 960px) 45vw, 100vw')}
-              alt="A bright Australian home entrance with a smart video doorbell"
-              width={1024}
-              height={768}
-              fetchPriority="high"
-            />
+            <HeroDevices />
             <figcaption>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={icon('smart-home-hub')} alt="" width={44} height={44} />

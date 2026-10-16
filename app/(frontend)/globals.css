@@ -2007,3 +2007,30 @@ p:not(
 @media (max-width: 899px) { .home-top .ht-facts li:nth-child(3) { border-left: 0; } .home-top .ht-facts li:nth-child(n+3) { border-top: 1px solid var(--ht-rule); } }
 .home-top .ht-facts b { color: var(--ht-ink); font-size: 1.75rem; line-height: 1.2; font-weight: 700; font-variant-numeric: tabular-nums; }
 .home-top .ht-facts span { color: var(--ht-meta); font-size: 14px; }
+
+/*
+ * Home hero illustration (components/home/HeroDevices.tsx): devices around a
+ * hub on a light ground in both themes, 621px tall like the image it replaced.
+ */
+.ht-devices {
+  position: relative; height: 621px; border-radius: 8px; overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(89, 85, 209, 0.14), transparent 55%),
+    radial-gradient(rgba(89, 85, 209, 0.16) 1px, transparent 1.4px) 0 0 / 22px 22px,
+    linear-gradient(160deg, #f8f9fc 0%, #eef0fb 100%);
+  border: 1px solid rgb(229, 231, 235);
+}
+/* --ys compresses the layout vertically on narrow screens, tiles and lines together,
+   so the bottom row clears the taller caption there. */
+.ht-devices { --ys: 1; }
+.ht-links { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleY(var(--ys)); transform-origin: top; }
+.ht-links line { stroke: #5955d1; stroke-opacity: .55; stroke-width: 2; vector-effect: non-scaling-stroke; stroke-dasharray: 6 7; animation: ht-flow 1.6s linear infinite; }
+@keyframes ht-flow { to { stroke-dashoffset: -26; } }
+.ht-device { position: absolute; top: calc(var(--y) * var(--ys) * 1%); transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.ht-tile { --s: clamp(72px, 9.5vw, 112px); display: flex; align-items: center; justify-content: center; overflow: hidden; width: var(--s); height: var(--s); background: #ffffff; border-radius: 8px; border: 1px solid rgb(229, 231, 235); box-shadow: 0 6px 20px rgba(35, 33, 89, 0.10); padding: 12%; }
+.ht-tile img { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+.ht-label { font-size: 12px; font-weight: 600; color: rgb(55, 65, 81); background: rgba(255, 255, 255, 0.85); padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.ht-hub .ht-tile { --s: clamp(108px, 13vw, 156px); border-radius: 50%; border: 2px solid #5955d1; box-shadow: 0 0 0 10px rgba(89, 85, 209, 0.12), 0 0 0 22px rgba(89, 85, 209, 0.06), 0 10px 30px rgba(35, 33, 89, 0.16); padding: 16%; }
+.ht-hub .ht-label { color: #ffffff; background: #5955d1; }
+@media (max-width: 600px) { .ht-devices { --ys: 0.88; } .ht-tile { --s: 68px; } .ht-hub .ht-tile { --s: 104px; } .ht-label { font-size: 11px; padding: 2px 6px; } }
+@media (prefers-reduced-motion: reduce) { .ht-links line { animation: none; } }
