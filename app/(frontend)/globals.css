@@ -20,6 +20,10 @@
 @source not "../drafts";
 @source not "../reports";
 @source not "../.impeccable";
+/* Classes used only in Payload page HTML, which Tailwind cannot scan. Without
+   this the About "Get in touch" box kept its light background in dark mode
+   and its white heading vanished. */
+@source inline("dark:bg-neutral-900/50");
 
 /*
  * Article text in the dark theme. The site marks dark mode with a .dark class;
@@ -1120,6 +1124,62 @@
       }
     }
   }
+
+  /*
+   * /contact/ (components/ContactPage.tsx). The h1, intro and notes come from
+   * the Payload page body with their classes stripped, so they are styled by
+   * element here, matching the /about/ hero and feature cards.
+   */
+  .contact-hero h1 {
+    margin-top: 0.75rem;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    color: var(--color-neutral-900);
+  }
+  .contact-hero p {
+    margin-top: 1.5rem;
+    max-width: 68ch;
+    font-size: 1.125rem;
+    line-height: 1.625;
+    color: var(--color-neutral-600);
+  }
+  .contact-notes section {
+    border: 1px solid var(--color-neutral-200);
+    border-radius: 1rem;
+    background: #fff;
+    padding: 1.5rem;
+  }
+  .contact-notes h2 {
+    font-size: 1.125rem;
+    line-height: 1.4;
+    color: var(--color-neutral-900);
+  }
+  .contact-notes p,
+  .contact-notes li {
+    font-size: 0.875rem;
+    line-height: 1.625;
+    color: var(--color-neutral-600);
+  }
+  .contact-notes p { margin-top: 0.5rem; }
+  .contact-notes ul {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+  :is(.contact-hero, .contact-notes) a {
+    font-weight: 600;
+    color: var(--color-primary-600);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .dark :is(.contact-hero h1, .contact-notes h2) { color: #fff; }
+  .dark .contact-hero p { color: var(--color-neutral-300); }
+  .dark :is(.contact-notes p, .contact-notes li) { color: var(--color-neutral-300); }
+  .dark .contact-notes section {
+    border-color: var(--color-neutral-800);
+    background: var(--color-neutral-900);
+  }
+  .dark :is(.contact-hero, .contact-notes) a { color: var(--color-primary-400); }
 
   /*
    * Related-story card titles rendered by Card7 inside the single-post

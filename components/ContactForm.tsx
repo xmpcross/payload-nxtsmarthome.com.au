@@ -121,7 +121,7 @@ export default function ContactForm() {
 
   if (state === 'sent') {
     return (
-      <div role="status" className="border-y border-neutral-200 py-8 dark:border-neutral-800">
+      <div role="status">
         <h2
           ref={sentRef}
           tabIndex={-1}
@@ -144,7 +144,7 @@ export default function ContactForm() {
   }
 
   const field =
-    'mt-1.5 block w-full rounded-sm border border-neutral-300 bg-white px-3.5 py-2.5 text-neutral-900 ' +
+    'mt-1.5 block w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-neutral-900 ' +
     'placeholder:text-neutral-500 focus:border-primary-500 focus:outline-2 focus:outline-offset-0 focus:outline-primary-500 ' +
     'dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:placeholder:text-neutral-400';
   const label = 'block font-semibold text-neutral-900 dark:text-white';
@@ -159,7 +159,7 @@ export default function ContactForm() {
             return (
               <label
                 key={t.value}
-                className={`flex cursor-pointer gap-3 rounded-sm border px-4 py-3.5 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary-500 ${
+                className={`flex cursor-pointer gap-3 rounded-xl border px-4 py-3.5 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary-500 ${
                   checked
                     ? 'border-primary-600 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/30'
                     : 'border-neutral-300 hover:border-neutral-900 dark:border-neutral-700 dark:hover:border-white'
@@ -228,7 +228,7 @@ export default function ContactForm() {
       </div>
 
       {state === 'error' && (
-        <div role="alert" className="border-y border-red-600/40 py-3 text-red-800 dark:border-red-400/40 dark:text-red-300">
+        <div role="alert" className="rounded-lg border border-red-600/40 px-4 py-3 text-red-800 dark:border-red-400/40 dark:text-red-300">
           {/* The server's message already tells the reader what to do next -
               appending advice here produced "Please email us instead. You can
               also email us directly." */}
@@ -239,7 +239,7 @@ export default function ContactForm() {
       <button
         type="submit"
         disabled={state === 'sending'}
-        className={`inline-flex items-center justify-center rounded-full bg-primary-600 px-6 py-3 font-bold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS}`}
+        className={`inline-flex items-center justify-center rounded-lg bg-brand-600 px-5 py-2.5 font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS}`}
       >
         {state === 'sending' ? 'Sending…' : 'Send message'}
       </button>
