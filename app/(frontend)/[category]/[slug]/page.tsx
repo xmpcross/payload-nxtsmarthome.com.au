@@ -11,14 +11,11 @@ import TableOfContents from '@/components/TableOfContents';
 import ReadAlso from '@/components/ReadAlso';
 import Comments from '@/components/Comments';
 import AffiliateLinks from '@/components/AffiliateLinks';
-import WidgetCategories from '@/components/WidgetCategories';
 import WidgetPosts from '@/components/WidgetPosts';
-import WidgetTags from '@/components/WidgetTags';
 import SingleMeta from '@/components/single/SingleMeta';
 import { SingleMetaAction } from '@/components/single/SingleMetaAction';
 import SingleRelatedPosts from '@/components/single/SingleRelatedPosts';
 import SingleTitle from '@/components/single/SingleTitle';
-import { getCategories, getTags } from '@/data/categories';
 import { toTPost } from '@/data/posts';
 import { resolveAuthor } from '@/lib/authors';
 import Avatar from '@/shared/Avatar';
@@ -128,7 +125,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
   const post = toTPost(article)
   const author = resolveAuthor(article.author)
   const relatedPosts = relatedPool.map((r) => toTPost(r.article))
-  const [widgetCategories, widgetTags] = await Promise.all([getCategories(), getTags()])
 
   return (
     <>
@@ -283,8 +279,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
           <aside className="mt-12 w-full lg:mt-0 lg:w-2/5 lg:ps-10 xl:w-1/3 xl:ps-0">
             <div className="space-y-7 lg:sticky lg:top-7">
               {relatedPosts.length > 0 && <WidgetPosts posts={relatedPosts.slice(0, 5)} />}
-              <WidgetCategories categories={widgetCategories.filter((c) => c.count > 0)} />
-              {widgetTags.length > 0 && <WidgetTags tags={widgetTags.slice(0, 12)} />}
             </div>
           </aside>
         </div>

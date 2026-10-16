@@ -75,7 +75,7 @@ export default function ProductBox({ product, subId, rank }: Props) {
               <p className="mb-2 text-base font-semibold leading-[1.625] text-primary-700 dark:text-primary-400">
                 What we like
               </p>
-              <ul className="space-y-1 text-[1.125rem] leading-[1.7] text-slate-700 dark:text-slate-300">
+              <ul className="space-y-1 text-[14px] leading-[1.6] text-slate-700 dark:text-slate-300">
                 {product.pros.map((pro) => (
                   <li key={pro} className="flex gap-2">
                     <span className="text-primary-600" aria-hidden="true">
@@ -93,7 +93,7 @@ export default function ProductBox({ product, subId, rank }: Props) {
               <p className="mb-2 text-base font-semibold leading-[1.625] text-rose-700 dark:text-rose-400">
                 Worth knowing
               </p>
-              <ul className="space-y-1 text-[1.125rem] leading-[1.7] text-slate-700 dark:text-slate-300">
+              <ul className="space-y-1 text-[14px] leading-[1.6] text-slate-700 dark:text-slate-300">
                 {product.cons.map((con) => (
                   <li key={con} className="flex gap-2">
                     <span className="text-rose-500" aria-hidden="true">
