@@ -1806,6 +1806,19 @@ h1 {
   font-size: 2.5rem;
 }
 
+/* Article "Sources" list (the ul straight after the Sources h2): 14px, no
+   bullets, flush left. User request, 17 Oct 2026. Unlayered so it beats the
+   prose disc markers and indent. */
+#article-body .prose h2[id^='sources'] + ul {
+  list-style: none;
+  padding-inline-start: 0;
+  font-size: 14px;
+}
+#article-body .prose h2[id^='sources'] + ul > li {
+  padding-inline-start: 0;
+  font-size: 14px;
+}
+
 /* Body copy at 1rem on every page and section, including intros and the
    paragraphs in Payload page HTML. User request, 17 Oct 2026. Unlayered, so it
    wins over text-lg / sm:text-lg / text-[1.125rem] and the prose-lg scale.
