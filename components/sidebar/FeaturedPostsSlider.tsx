@@ -58,7 +58,7 @@ export default function FeaturedPostsSlider({ posts }: { posts: FeaturedPost[] }
         <div className="flex">
           {items.map((post) => (
             <div key={post.href} className="min-w-0 shrink-0 grow-0 basis-full">
-              <Link href={post.href} className="group relative block h-[350px] overflow-hidden rounded-2xl">
+              <Link href={post.href} className="group relative block h-[250px] overflow-hidden rounded-2xl">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   {...post.image}
