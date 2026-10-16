@@ -93,7 +93,9 @@ export default function HomeLanding({
 }) {
   const count = (slug: string) => categories.find((c) => c.handle === slug)?.count ?? 0;
   const topics = categories.filter((c) => c.count > 0);
-  const [feature, ...rest] = articles;
+  // Latest section: Buying Guides only (user request, 17 Oct 2026), newest first.
+  const buyingGuides = articles.filter((a) => a.categoryMeta?.slug === 'buying-guides');
+  const [feature, ...rest] = buyingGuides;
   const rows = rest.slice(0, 5);
   const bio = (editor.bio || '').split('. ').slice(0, 2).join('. ').replace(/\.?$/, '.');
 
@@ -218,7 +220,7 @@ export default function HomeLanding({
       {/* Latest guides */}
       {feature ? (
         <section aria-labelledby="home-latest">
-          <SectionHead id="home-latest" title="Latest guides" intro="New and updated articles." href="/articles/" cta={`All ${articles.length} articles`} />
+          <SectionHead id="home-latest" title="Latest buying guides" intro="New and updated buying guides for Australian homes." href="/categories/buying-guides/" cta={`All ${buyingGuides.length} buying guides`} />
           <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
             <article className="min-w-0">
               <Link href={articleHref(feature)} className="group block">
