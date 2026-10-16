@@ -19,7 +19,6 @@ import SingleRelatedPosts from '@/components/single/SingleRelatedPosts';
 import SingleTitle from '@/components/single/SingleTitle';
 import { toTPost } from '@/data/posts';
 import { resolveAuthor } from '@/lib/authors';
-import Avatar from '@/shared/Avatar';
 import { Badge } from '@/shared/Badge';
 import { Divider } from '@/shared/divider';
 import Tag from '@/shared/Tag';
@@ -125,7 +124,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
   const allProducts = [...inlineProducts, ...(article.products ?? [])];
 
   const post = toTPost(article)
-  const author = resolveAuthor(article.author)
   const relatedPosts = relatedPool.map((r) => toTPost(r.article))
 
   // Sidebar (components/sidebar/PostSidebar.tsx), chosen as bestlooking.skin
@@ -276,26 +274,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
                 ))}
               </div>
             ) : null}
-
-            {/* Author */}
-            <div className="mt-10 flex gap-5 rounded-2xl border border-neutral-200 p-6 dark:border-neutral-700">
-              <Avatar
-                className="size-14 shrink-0"
-                src={author.avatar || undefined}
-                initials={author.avatar ? undefined : author.initials}
-                alt={author.name}
-              />
-              <div>
-                <p className="text-xs tracking-wider text-neutral-500 uppercase">Written by</p>
-                <Link
-                  href={`/authors/${author.slug}/`}
-                  className="text-lg font-semibold text-neutral-900 hover:underline dark:text-white"
-                >
-                  {author.name}
-                </Link>
-                {author.bio && <p className="mt-1 text-base leading-[1.7] text-neutral-600 dark:text-neutral-400">{author.bio}</p>}
-              </div>
-            </div>
 
             {article.faq?.length ? <Faq items={article.faq} /> : null}
 

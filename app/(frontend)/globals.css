@@ -125,6 +125,19 @@
     @apply border-t border-neutral-200 dark:border-neutral-700;
   }
 
+  /* Body text weight 300 site-wide (body and p: the font-body rule further
+     down). User request, 17 Oct 2026. In the base layer so font-* utilities
+     and the heading weight rule still win. strong/b are pinned to 600 because
+     their default, "bolder", only lifts 300 to 400 and emphasis would vanish. */
+  ul li,
+  ol li {
+    font-weight: 300;
+  }
+  strong,
+  b {
+    font-weight: 600;
+  }
+
   input[type='time']::-webkit-calendar-picker-indicator {
     @apply rounded-md dark:bg-neutral-500;
   }
@@ -1036,9 +1049,9 @@
  */
 @layer components {
   #article-body .prose {
-    /* Body paragraphs: 16 / 27.2 (line-height 1.7) on all breakpoints. */
+    /* Body paragraphs: 18 / 30.6 (line-height 1.7) on all breakpoints. */
     p {
-      font-size: 1rem;
+      font-size: 1.125rem;
       line-height: 1.7;
       margin-bottom: 1.375rem; /* ~22px */
     }
@@ -1773,14 +1786,15 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 8px !important;
 }
 
-/* Body copy: Inter at the default weight (400) on every page (loaded in
-   app/layout.tsx). In the base layer, so a weight utility on a specific
-   element (font-medium, font-semibold, ...) still wins. */
+/* Body copy: weight 300 on every page (user request, 17 Oct 2026; list items
+   and strong/b are set alongside the hr rule near the top). In the base layer,
+   so a weight utility on a specific element (font-medium, font-semibold, ...)
+   still wins. */
 @layer base {
   body,
   p {
     font-family: var(--font-body);
-    font-weight: 400;
+    font-weight: 300;
   }
   /* Card titles wrap their text in a <p> inside the heading: keep the
      heading's weight and font there, not body copy's. */
@@ -1817,6 +1831,13 @@ h1 {
 #article-body .prose h2[id^='sources'] + ul > li {
   padding-inline-start: 0;
   font-size: 14px;
+}
+
+/* Single-post article paragraphs at 18px (user request, 17 Oct 2026): the
+   one exception to the 1rem body copy rule below, which it outranks by
+   specificity. */
+#article-body .prose p {
+  font-size: 18px;
 }
 
 /* Body copy at 1rem on every page and section, including intros and the
