@@ -11,7 +11,8 @@ import TableOfContents from '@/components/TableOfContents';
 import ReadAlso from '@/components/ReadAlso';
 import Comments from '@/components/Comments';
 import AffiliateLinks from '@/components/AffiliateLinks';
-import WidgetPosts from '@/components/WidgetPosts';
+import PostSidebar from '@/components/sidebar/PostSidebar';
+import { getCategories } from '@/data/categories';
 import SingleMeta from '@/components/single/SingleMeta';
 import { SingleMetaAction } from '@/components/single/SingleMetaAction';
 import SingleRelatedPosts from '@/components/single/SingleRelatedPosts';
@@ -29,6 +30,7 @@ import {
   getRelatedWithScores,
   mergedInto,
   articleHref,
+  formatDate,
   typeLabels,
 } from '@/lib/content';
 import { getProductsBySlugs } from '@/lib/products';
@@ -125,6 +127,35 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
   const post = toTPost(article)
   const author = resolveAuthor(article.author)
   const relatedPosts = relatedPool.map((r) => toTPost(r.article))
+
+  // Sidebar (components/sidebar/PostSidebar.tsx), chosen as bestlooking.skin
+  // chooses its own: the three newest other guides, then three more recent ones
+  // with a cover as Featured Posts, other topics first. There is no featured
+  // flag in the CMS, so nothing here claims an editorial pick.
+  const recent = all.filter((a) => a.slug !== article.slug);
+  const sidebarLatest = recent.slice(0, 3).map((a) => ({
+    href: articleHref(a),
+    title: a.title,
+    image: responsiveImg(coverFor(a), 108, '108px'),
+    imageAlt: a.imageAlt || a.title,
+    date: formatDate(a.date),
+    readingTime: a.readingMinutes,
+  }));
+  const featuredPool = recent.slice(3).filter((a) => coverFor(a));
+  const inThisTopic = (a: (typeof recent)[number]) => a.categoryMeta?.slug === article.categoryMeta?.slug;
+  const sidebarFeatured = [...featuredPool.filter((a) => !inThisTopic(a)), ...featuredPool.filter(inThisTopic)]
+    .slice(0, 3)
+    .map((a) => ({
+      href: articleHref(a),
+      title: a.title,
+      image: responsiveImg(coverFor(a), 420, '(min-width: 1024px) 420px, 100vw'),
+      imageAlt: a.imageAlt || a.title,
+      author: resolveAuthor(a.author).name,
+      date: formatDate(a.date),
+    }));
+  const sidebarTopics = (await getCategories())
+    .filter((c) => c.count > 0 && c.handle !== article.categoryMeta?.slug)
+    .map((c) => ({ href: `/categories/${c.handle}/`, label: c.name }));
 
   return (
     <>
@@ -276,11 +307,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
             </div>
           </article>
 
-          <aside className="mt-12 w-full lg:mt-0 lg:w-2/5 lg:ps-10 xl:w-1/3 xl:ps-0">
-            <div className="space-y-7 lg:sticky lg:top-7">
-              {relatedPosts.length > 0 && <WidgetPosts posts={relatedPosts.slice(0, 5)} />}
-            </div>
-          </aside>
+          <PostSidebar latest={sidebarLatest} topics={sidebarTopics} featured={sidebarFeatured} />
         </div>
 
         <SingleRelatedPosts relatedPosts={relatedPosts} />
