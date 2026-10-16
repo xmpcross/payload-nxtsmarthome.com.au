@@ -70,7 +70,7 @@ Runtime (Functions):
 |---|---|
 | `SMTP_USER`, `SMTP_PASS` | secret, the Stalwart account the form sends as |
 | `SMTP_HOST`, `SMTP_PORT` | default `mail.fxnstudio.com`, `465` |
-| `CONTACT_TO` | default `hello@nxtsmarthome.com.au` |
+| `CONTACT_TO` | default `contact@nxtsmarthome.com.au` |
 | `CONTACT_FROM` | default `SMTP_USER`. Stalwart rejects a sender the account does not own |
 | `CONTACT_ORIGIN` | default `https://nxtsmarthome.com.au` |
 
@@ -83,7 +83,7 @@ used only by the content scripts on the server.
 
 ## Mail deliverability
 
-The form sends from a Stalwart account to `hello@nxtsmarthome.com.au`. Before
+The form sends from a Stalwart account to `contact@nxtsmarthome.com.au`. Before
 relying on it, publish in Cloudflare DNS for `nxtsmarthome.com.au`:
 
 - SPF: add `ip4:51.161.208.188` to the current

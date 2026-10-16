@@ -9,7 +9,7 @@
  * Environment (Pages → Settings → Variables and Secrets):
  *   SMTP_USER, SMTP_PASS   Stalwart account the form sends as (secrets, required)
  *   SMTP_HOST, SMTP_PORT   default mail.fxnstudio.com, 465 (implicit TLS)
- *   CONTACT_TO             where messages go, default hello@nxtsmarthome.com.au
+ *   CONTACT_TO             where messages go, default contact@nxtsmarthome.com.au
  *   CONTACT_FROM           sender address, default SMTP_USER — Stalwart rejects a
  *                          sender its account does not own
  *   CONTACT_ORIGIN         CORS origin, default https://nxtsmarthome.com.au
@@ -33,7 +33,7 @@ function config(env) {
     port: Number(env.SMTP_PORT || 465),
     user,
     pass: env.SMTP_PASS || '',
-    to: (env.CONTACT_TO || 'hello@nxtsmarthome.com.au').trim(),
+    to: (env.CONTACT_TO || 'contact@nxtsmarthome.com.au').trim(),
     from: (env.CONTACT_FROM || user).trim(),
     origin: (env.CONTACT_ORIGIN || 'https://nxtsmarthome.com.au').trim(),
   };

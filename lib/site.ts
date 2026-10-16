@@ -24,7 +24,7 @@ export const site = {
   currency: 'AUD',
   organisation: {
     name: 'NXT Smart Home',
-    email: 'hello@nxtsmarthome.com.au',
+    email: 'contact@nxtsmarthome.com.au',
     /*
      * The business that operates the site, named on /about/, /contact/,
      * /privacy/ and in the footer.
