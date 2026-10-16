@@ -1082,9 +1082,9 @@
       letter-spacing: -0.2px;
     }
 
-    /* H3: 1.2rem (19.2px) / 26.9 on all breakpoints (user request, 17 Oct 2026). */
+    /* H3: 18px / 25.2 on all breakpoints (user request, 17 Oct 2026). */
     h3 {
-      font-size: 1.2rem;
+      font-size: 18px;
       line-height: 1.4;
       margin-top: 1.25rem; /* 20px */
       margin-bottom: 0.5rem; /* 8px */
@@ -1092,10 +1092,10 @@
       letter-spacing: -0.2px;
     }
 
-    /* H4: 20 / 28 on all breakpoints. */
+    /* H4: 18px / 25.2 on all breakpoints (user request, 17 Oct 2026). */
     h4 {
-      font-size: 1.25rem;     /* 20px */
-      line-height: 1.4;       /* 28 / 20 */
+      font-size: 18px;
+      line-height: 1.4;
       margin-top: 1.5rem;     /* 24px */
       margin-bottom: 0.625rem; /* 10px */
       font-weight: 600;

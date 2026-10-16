@@ -36,6 +36,7 @@ import { getProductsBySlugs } from '@/lib/products';
 import { site } from '@/lib/site';
 import { articleJsonLd, breadcrumbJsonLd, faqJsonLd, itemListJsonLd, metaDescription, pageAlternates, pageTitle, titleText } from '@/lib/seo';
 import { responsiveImg } from '@/lib/image'
+import { withGallery } from '@/lib/article-gallery'
 
 // Articles refresh from Strapi every 5 minutes (ISR); new slugs render on demand.
 export const revalidate = 300;
@@ -252,7 +253,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
 
             <div id="article-body">
               <ArticleBody
-                html={article.html}
+                html={withGallery(article.html, article.gallery, article.title)}
                 products={inlineProducts}
                 subId={article.slug}
                 midSlot={<ReadAlso items={readAlso.length ? readAlso : relatedScored.slice(0, 2).map((r) => r.article)} />}
