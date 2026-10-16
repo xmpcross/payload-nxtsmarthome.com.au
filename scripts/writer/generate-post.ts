@@ -22,10 +22,18 @@
 // Categories: security, lighting, energy, entertainment, climate,
 //             hubs-and-platforms, robot-vacuums, setup-guides, buying-guides
 //
-// AI provider: Gemini by default (GEMINI_API_KEY). Override with AI_PROVIDER=anthropic|openai|openrouter.
+// AI provider: OpenRouter by default (OPENROUTER_API_KEY, OPENROUTER_MODEL);
+// run.sh sets AI_PROVIDER=openrouter when it is unset, since the Gemini account
+// has no credit. Override with AI_PROVIDER=gemini|anthropic|openai.
+// Research: web search before writing. Gemini+Google Search when
+// AI_PROVIDER=gemini; OpenRouter's web plugin when AI_PROVIDER=openrouter
+// (OPENROUTER_RESEARCH_MODEL, default OPENROUTER_MODEL; OPENROUTER_SEARCH_ENGINE,
+// default exa; OPENROUTER_SEARCH_RESULTS, default 8); otherwise Claude web
+// search when ANTHROPIC_API_KEY is set, else OpenRouter when
+// OPENROUTER_API_KEY is set.
 // Images: fal.ai FLUX (FAL_KEY). Pass --no-images to skip.
 
-if (!process.env.AI_PROVIDER) process.env.AI_PROVIDER = 'gemini';
+if (!process.env.AI_PROVIDER) process.env.AI_PROVIDER = 'openrouter';
 
 import fs from 'node:fs';
 import fsP from 'node:fs/promises';
@@ -155,6 +163,9 @@ const {
   OPENROUTER_API_KEY,
   OPENROUTER_MODEL = 'openai/gpt-4.1',
   OPENROUTER_MAX_TOKENS = '16000',
+  OPENROUTER_RESEARCH_MODEL,
+  OPENROUTER_SEARCH_ENGINE = 'exa',
+  OPENROUTER_SEARCH_RESULTS = '8',
   FAL_KEY,
 } = process.env;
 
@@ -275,6 +286,10 @@ function pickProducts(topic: string, category: string, candidates = 8) {
   })
     .filter(x => hasCat ? x.inCategory || x.overlap >= 2 : x.overlap >= 1)
     .sort((a, b) => b.score - a.score)
+    // Rule 8: products that share words with the topic first. An in-category
+    // product with no topic overlap (a hub offered to a kitchen article) is
+    // only a filler candidate, offered when too few relevant ones exist.
+    .filter((x, _i, all) => x.overlap > 0 || all.filter(y => y.overlap > 0).length < 4)
     .slice(0, candidates)
     .map(x => x.p);
 }
@@ -284,35 +299,42 @@ function productContext(products: any[]) {
   const lines = products.map((p: any) =>
     `- ${p.slug} | ${p.brand ? `${p.brand} ` : ''}${p.name} | ${p.subCategory || p.categoryName || ''} | best for: ${String(p.bestFor || '').replace(/\s+/g, ' ').slice(0, 160)}`
   );
-  return `\n\nCatalogue products (real products sold in Australia, from this site's catalogue):\n${lines.join('\n')}\n\nProduct placement (mandatory):\n- Feature between 2 and 4 of the products above that genuinely fit this article. Discuss each in the prose where it is relevant.\n- Immediately after the section that discusses a product, put its marker alone on its own line: ::product:<slug>::\n- Use only slugs from the list above, each at most once. Never invent products, slugs, prices, specs or ratings.`;
+  return `\n\nCatalogue products (real products sold in Australia, from this site's catalogue):\n${lines.join('\n')}\n\nProduct placement:\n- Feature 2-4 of the products above, but only ones this article genuinely discusses. Never add a sentence or section just to mention one.\n- Name each featured product in the prose by brand and model (e.g. "Aqara Hub M100", "Tapo P110") in the section that discusses it. A marker for a product the text does not name is removed, and an article left with fewer than 2 boxes is held as a draft.\n- Immediately after the section that discusses a product, put its marker alone on its own line: ::product:<slug>::\n- Use only slugs from the list above, each at most once. Never invent products, slugs, prices, specs or ratings. If fewer than 2 genuinely fit, place only those that do.`;
 }
 
 function applyProducts(post: any, products: any[]) {
-  if (typeof post.content !== 'string') return 0;
+  if (typeof post.content !== 'string') return { placed: 0, dropped: [] as string[] };
   const allowed = new Map(products.map((p: any) => [p.slug, p]));
   const seen = new Set<string>();
   const marker = (key: string) => `\n\n::product:${key}::\n\n`;
   let content = post.content.replace(/::product:([a-z0-9-]+)::/gi, (_: string, slug: string) => {
     const key = slug.toLowerCase();
-    if (!allowed.has(key) || seen.has(key) || seen.size >= 4) return '';
+    if (!allowed.has(key) || seen.has(key)) return '';
     seen.add(key);
     return marker(key);
   });
-  // Insert a box for any shortlisted product mentioned in the text but not yet boxed.
+  // Rule 8: a box only for a product the text names (brand + model, or its name).
+  const filtered = rules.filterProductMarkers(content, products);
+  content = filtered.text;
+  const kept = filtered.kept.slice(0, 4);
+  for (const slug of filtered.kept.slice(4)) content = content.replace(new RegExp(`\\s*::product:${slug}::\\s*`, 'i'), '\n\n');
+  const placed = new Set<string>(kept);
+  // Insert a box for any shortlisted product named in the text but not yet boxed.
   for (const p of products) {
-    if (seen.size >= 4) break;
-    if (seen.has(p.slug)) continue;
-    const names = [p.brand ? `${p.brand} ${p.name}` : '', p.name].filter((n: string) => n && n.length > 4);
-    const idx = names.map((n: string) => content.toLowerCase().indexOf(n.toLowerCase())).filter((i: number) => i >= 0).sort((a: number, b: number) => a - b)[0];
-    if (idx === undefined) continue;
+    if (placed.size >= 4) break;
+    if (placed.has(p.slug)) continue;
+    const idx = rules.productMentionIndex(p, content);
+    // Not into the FAQ or Sources (the FAQ is moved to its own field).
+    const tail = content.search(/^##\s+(?:Frequently Asked Questions|FAQs?|Sources)\b/im);
+    if (idx < 0 || (tail >= 0 && idx >= tail)) continue;
     const nextH = content.slice(idx).search(/\n#{2,6} /);
     const at = nextH >= 0 ? idx + nextH : content.length;
     content = `${content.slice(0, at).replace(/\s+$/, '')}${marker(p.slug)}${content.slice(at).replace(/^\s+/, '')}`;
-    seen.add(p.slug);
+    placed.add(p.slug);
   }
   post.content = content.replace(/\n{3,}/g, '\n\n').trim();
-  post.productSlugs = [...seen];
-  return seen.size;
+  post.productSlugs = [...placed];
+  return { placed: placed.size, dropped: filtered.dropped };
 }
 
 function extractFaq(post: any) {
@@ -453,7 +475,7 @@ async function generateImage(prompt: string, aspect = 'landscape_16_9'): Promise
   return url;
 }
 
-async function saveImageToPayload(imageUrl: string, filename: string): Promise<number | null> {
+async function saveImageToPayload(imageUrl: string, filename: string, alt: string): Promise<number | null> {
   const res = await fetch(imageUrl);
   if (!res.ok) throw new Error(`Failed to download image ${imageUrl}: ${res.status}`);
   const ab = await res.arrayBuffer();
@@ -466,7 +488,7 @@ async function saveImageToPayload(imageUrl: string, filename: string): Promise<n
     const payload = await db();
     const doc: any = await payload.create({
       collection: 'media',
-      data: { alt: filename.replace(/-/g, ' ') },
+      data: { alt },
       filePath: tmpFile,
       overwriteExistingFiles: false,
     });
@@ -486,15 +508,28 @@ async function generateAndSaveImages(post: any): Promise<{ coverId: number | nul
     { kind: 'gallery-1', prompt: prompts.gallery[0],  aspect: 'landscape_4_3' },
     { kind: 'gallery-2', prompt: prompts.gallery[1],  aspect: 'landscape_4_3' },
   ];
+  const alts = imageAlts(post, prompts);
   const results = await Promise.all(allPrompts.map(async ({ kind, prompt, aspect }) => {
     const url = await generateImage(prompt, aspect);
-    const id = await saveImageToPayload(url, `${baseName}-${kind}`);
+    const id = await saveImageToPayload(url, `${baseName}-${kind}`, alts[kind as keyof typeof alts]);
     return { kind, id };
   }));
   process.stdout.write(`${((Date.now() - t0) / 1000).toFixed(1)}s\n`);
   const coverId = results.find(r => r.kind === 'cover')?.id ?? null;
   const galleryIds = results.filter(r => r.kind !== 'cover').map(r => r.id).filter((id): id is number => id !== null);
   return { coverId, galleryIds };
+}
+
+/** Descriptive alt text: cover = article title; gallery = the section each image illustrates. */
+function imageAlts(post: any, prompts: { cover: string; gallery: string[] }) {
+  const sections = extractH2Sections(String(post?.content || ''));
+  const base = { title: post?.title, seoTitle: post?.seoTitle, sections, body: String(post?.content || '') };
+  const cover = rules.imageAltText({ ...base, kind: 'cover', prompt: prompts.cover });
+  const g1 = rules.imageAltText({ ...base, kind: 'gallery', prompt: prompts.gallery[0] });
+  const used = sections.filter((s) => g1.toLowerCase().startsWith(s.toLowerCase().slice(0, 20)));
+  let g2 = rules.imageAltText({ ...base, kind: 'gallery', prompt: prompts.gallery[1], exclude: used });
+  if (g2 === g1) g2 = rules.imageAltText({ ...base, kind: 'gallery', prompt: prompts.gallery[1], sections: [] });
+  return { cover, 'gallery-1': g1, 'gallery-2': g2 };
 }
 
 function extractH2Sections(markdown: string): string[] {
@@ -532,7 +567,9 @@ function fillMissingImagePrompts(prompts: any, post: any) {
   while (gallery.length < 2) gallery.push(fallbacks[gallery.length] ?? fallbacks[0]);
 
   if (usedFallback) console.log('  (model returned incomplete image prompts — using section-derived fallbacks)');
-  return { cover, gallery };
+  // The model's own prompts must also forbid text in the image.
+  const noText = (p: string) => (/\bno text\b/i.test(p) ? p : `${String(p).trim()} ${NO_TEXT}`);
+  return { cover: noText(cover), gallery: gallery.slice(0, 2).map(noText) };
 }
 
 // ---------------------------------------------------------------------------
@@ -643,6 +680,7 @@ async function researchTopic(topic: string, category: string) {
       return null;
     }
   }
+  if (aiProvider === 'openrouter') return researchWithOpenRouter(topic, label);
   if (ANTHROPIC_API_KEY) {
     try {
       const { researchJson } = await import('/opt/strapi-cms-git/backend/ai-writer-cli/originfacts-content-rules.js');
@@ -664,8 +702,37 @@ async function researchTopic(topic: string, category: string) {
       return null;
     }
   }
-  console.log('  research : skipped (no ANTHROPIC_API_KEY and AI_PROVIDER is not gemini) — article will be held as draft');
+  if (OPENROUTER_API_KEY) return researchWithOpenRouter(topic, label);
+  console.log('  research : skipped (no ANTHROPIC_API_KEY or OPENROUTER_API_KEY, and AI_PROVIDER is not gemini) — article will be held as draft');
   return null;
+}
+
+/*
+ * OpenRouter web search (web plugin, Exa engine by default). Pricing, from
+ * openrouter.ai/docs/features/web-search (Oct 2026): Exa $0.007 per search
+ * request including up to 10 results ($0.001 per extra result); Parallel
+ * $0.001-$0.005 per request; Perplexity $0.005; native engines pass through
+ * the provider's price. Plus the research model's token cost. One search per
+ * article. See rules.researchWithOpenRouter.
+ */
+async function researchWithOpenRouter(topic: string, label: string) {
+  const model = OPENROUTER_RESEARCH_MODEL || OPENROUTER_MODEL;
+  try {
+    const result: any = await rules.researchWithOpenRouter({
+      apiKey: OPENROUTER_API_KEY!,
+      model,
+      prompt: rules.researchPrompt(topic, label),
+      engine: OPENROUTER_SEARCH_ENGINE,
+      maxResults: Math.min(Math.max(Number(OPENROUTER_SEARCH_RESULTS) || 8, 1), 20),
+    });
+    const usage = rules.openRouterUsageLine(result.usage);
+    console.log(`  research : OpenRouter web search (${model}, ${OPENROUTER_SEARCH_ENGINE}), ${result.json.facts.length} facts, ${result.citedUrls.length} cited URLs, ${result.searchedUrls.size} source URLs${usage ? ` · ${usage}` : ''}`);
+    if (!result.searchedUrls.size) throw new Error('no search results');
+    return result;
+  } catch (err: any) {
+    console.log(`  research : failed (${String(err.message).slice(0, 160)}) — article will be held as draft`);
+    return null;
+  }
 }
 
 async function generatePost(topic: string, category: string) {
@@ -708,13 +775,14 @@ Return STRICT JSON only with exactly these keys:
 Content requirements:
 - Markdown only in "content". Use H2/H3 headings.
 - Open with a 40-60 word direct answer to the question in the title, as a plain paragraph before the first heading.
-- Use question-form H2s where they read naturally.
-- Keep sentences under 30 words. Short paragraphs.
-- Comparison, buying-guide and roundup articles must include a Markdown comparison table.
+- Question-form H2s: at least 3 of the H2s (or 40% of them if that is fewer; Sources and FAQ do not count) must be questions a reader would ask, ending in "?". Keep the rest as plain labels; no more than about half questions.
+- Keep sentences under 30 words, averaging under 20. Short paragraphs.
+- Comparison, buying-guide and roundup articles, and any article whose title says best, vs, versus, compare, comparison, buying guide or "top N", must include a Markdown comparison table (header row plus |---| separator row) near the top.
 - Name the product shortlist early — within the first third of the article for roundups, buying guides and comparisons.
 - Close with "## Frequently Asked Questions" (4-6 questions each answered in 40-90 words).
 - End with "## Sources": the official and manufacturer pages from the research notes.
 - Link 2-4 related NXT Smart Home articles from the internal-link list where they genuinely help.
+- seoDescription: 120-155 characters, plain text.
 - Keep claims factual. Never invent prices, specs, ratings or test results.
 
 Image prompt requirements:
@@ -741,7 +809,7 @@ Image prompt requirements:
   post.slug = slugifyStr(post.slug || post.title);
   post.excerpt = limitText(post.excerpt, 500);
   post.seoTitle = limitText(post.seoTitle, 70);
-  post.seoDescription = limitText(post.seoDescription, 160);
+  post.seoDescription = limitText(post.seoDescription, rules.META_DESCRIPTION_MAX);
   post.seoKeywords = limitText(post.seoKeywords, 255);
   post.postType = argv['post-type'] || 'informative';
   post.readingTimeMinutes = Number(post.readingTimeMinutes) || estimateReadingTime(post.content);
@@ -762,8 +830,29 @@ Image prompt requirements:
     if (dropped.length) console.log(`  links    : unlinked ${dropped.length} URL(s) not sourced (${[...new Set(dropped)].slice(0, 4).join(', ')}${dropped.length > 4 ? ', ...' : ''})`);
   }
 
+  // Products (rule 8): boxes only for products the text names; no padding
+  // with generic picks. Fewer than 2 is a rules problem, so the post stays a draft.
+  const productIssues: string[] = [];
+  const min = rules.PRODUCT_BOXES_MIN;
+  if (products.length) {
+    const { placed, dropped } = applyProducts(post, products);
+    console.log(`  products : ${placed} placed${placed ? ` (${post.productSlugs.join(', ')})` : ''} from ${products.length} candidates`);
+    if (dropped.length) console.log(`  products : removed ${dropped.length} box(es) for products the text never names (${dropped.join(', ')})`);
+    post.productShortfall = placed < min;
+    if (post.productShortfall) {
+      console.log(`  WARNING  : fewer than ${min} product boxes — saving as DRAFT`);
+      productIssues.push(`${placed} product box(es) for products the article names (want at least ${min}; boxes for products the text never names are removed, rule 8)`);
+    }
+    const faqCount = extractFaq(post);
+    if (faqCount) console.log(`  faq      : ${faqCount} questions moved to FAQ field`);
+  } else {
+    post.productShortfall = true;
+    post.content = String(post.content).replace(/\s*::product:[a-z0-9-]+::\s*/gi, '\n\n').trim();
+    productIssues.push(`no catalogue products fit this article (want at least ${min} product boxes, rule 8)`);
+  }
+
   // Content rules check
-  const issues = rules.checkNxtsmarthomeContent(post, { allowedUrls: research?.searchedUrls ?? null });
+  const issues = [...rules.checkNxtsmarthomeContent(post, { allowedUrls: research?.searchedUrls ?? null }), ...productIssues];
   if (issues.length) {
     console.log(`  rules    : ${issues.length} problem(s):`);
     for (const issue of issues) console.log(`    - ${issue}`);
@@ -771,17 +860,6 @@ Image prompt requirements:
     console.log('  rules    : all checks passed');
   }
   post.rulesIssues = issues;
-
-  // Products
-  if (products.length) {
-    const placed = applyProducts(post, products);
-    const { min } = { min: 2 };
-    console.log(`  products : ${placed} placed${placed ? ` (${post.productSlugs.join(', ')})` : ''} from ${products.length} candidates`);
-    post.productShortfall = placed < min;
-    if (post.productShortfall) console.log(`  WARNING  : fewer than ${min} product boxes — saving as DRAFT`);
-    const faqCount = extractFaq(post);
-    if (faqCount) console.log(`  faq      : ${faqCount} questions moved to FAQ field`);
-  }
 
   if (!research) post.rulesIssues = [...(post.rulesIssues ?? []), 'not researched: facts unverified'];
 

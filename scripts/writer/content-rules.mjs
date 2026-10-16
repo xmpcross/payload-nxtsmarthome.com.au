@@ -19,6 +19,10 @@
 //   CQ2    legal and safety articles with no Sources section
 //   CQ3    titles promising figures or a named programme the body never gives
 //   CQ5    non-AU product variants (EU switch, US plug) placed in articles
+//   CQ9    58 of 84 articles with no question-form H2
+//   GEO-3  no comparison tables on "vs" and "best" pages
+//   rule 8 the same generic hubs boxed in unrelated articles (kitchen, bedroom,
+//          nursery, garage): a product box needs the product named in the text
 //
 // generate-site-post.js uses this module when site.contentRules is
 // 'nxtsmarthome': the rules go into the prompt, research comes from web
@@ -33,6 +37,14 @@ export const META_DESCRIPTION_MAX = 155;
 export const SHORT_ANSWER_WORDS = [40, 60];
 export const SENTENCE_MAX = 30;
 export const INTERNAL_LINKS_MIN = 2;
+// CQ9/GEO-4: question-form H2s. At least QUESTION_H2_MIN, or QUESTION_H2_SHARE
+// of the H2s if that is fewer, never below 1.
+export const QUESTION_H2_MIN = 3;
+export const QUESTION_H2_SHARE = 0.4;
+// GEO-3: a title that sets up a comparison needs a table, whatever the post type.
+export const COMPARISON_TITLE = /\b(?:best|vs\.?|versus|compare|comparison|buying guide|top \d+)\b/i;
+export const PRODUCT_BOXES_MIN = 2;
+export const ALT_MAX = 125;
 
 export const SITE_ORIGIN = 'https://nxtsmarthome.com.au';
 
@@ -118,17 +130,22 @@ Structure
 - Open with a 40-60 word direct answer to the question in the title, as a plain
   paragraph before the first heading. Answer it outright; do not introduce the
   topic.
-- Use question-form H2s where they read naturally ("Can I install a smart
-  switch myself?"), not labels ("The rule, plainly").
+- Question-form H2s: at least ${QUESTION_H2_MIN} of the H2s (or ${Math.round(QUESTION_H2_SHARE * 100)}% of them if
+  that is fewer; Sources and FAQ do not count) are questions a reader would
+  ask ("Can I install a smart switch myself?"), not labels ("The rule,
+  plainly"). Keep the rest as plain labels; no more than about half questions.
 - Keep sentences under ${SENTENCE_MAX} words. Short paragraphs.
-- Comparison, buying-guide and roundup articles include a Markdown comparison
-  table, using only figures the research notes confirm; leave a cell as "Not
-  stated" rather than guess.
+- Comparison, buying-guide and roundup articles, and any article whose title
+  says best, vs, versus, compare, comparison, buying guide or "top N", include
+  a Markdown comparison table near the top, using only figures the research
+  notes confirm; leave a cell as "Not stated" rather than guess.
 - Product boxes: place a catalogue product only where the article genuinely
   discusses that kind of product. Never add a sentence or section just to
   mention one (a security camera in a smoke-alarm article is an ad, not
-  content, CLAUDE.md rule 3). Placing none is better than placing one that
-  does not belong; the editor then finds a product or holds the article.
+  content, CLAUDE.md rule 3). Name each boxed product (brand and model) in the
+  prose before its box; a box for a product the text never names is removed.
+  Placing none is better than placing one that does not belong; the editor
+  then finds a product or holds the article.
 - "Best X", buying-guide, roundup and comparison articles: name the shortlist
   early. Within the first third of the article, a short "Our shortlist" style
   section (an H2) gives each catalogue product a one-line who-it-suits, with its
@@ -361,9 +378,13 @@ export function checkNxtsmarthomeContent(post, { allowedUrls = null } = {}) {
   if (avg > 22) issues.push(`average sentence is ${avg.toFixed(1)} words (want 22 or fewer)`);
   if (long.length > 3) issues.push(`${long.length} sentences over ${SENTENCE_MAX + 5} words, e.g. "${long[0].slice(0, 90)}..."`);
 
-  // GEO-4: at least some question-form H2s.
+  // GEO-4/CQ9: question-form H2s.
   const h2 = [...body.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1]).filter((h) => !/^(sources|frequently asked questions|faqs?)$/i.test(h.trim()));
-  if (h2.length >= 3 && !h2.some((h) => /\?\s*$/.test(h))) issues.push('no question-form H2 headings');
+  if (h2.length) {
+    const want = questionH2Required(h2.length);
+    const have = h2.filter((h) => /\?\s*$/.test(h.replace(/\*+/g, ''))).length;
+    if (have < want) issues.push(`${have} of ${h2.length} H2s are questions (want at least ${want})`);
+  }
 
   // S1: internal links.
   const links = internalLinks(body);
@@ -376,10 +397,13 @@ export function checkNxtsmarthomeContent(post, { allowedUrls = null } = {}) {
     if (first >= 0 && first > body.length / 3) issues.push(`first product box is ${Math.round((first / body.length) * 100)}% of the way down (want the shortlist in the first third)`);
   }
 
-  // GEO-6: comparison table for comparison-type articles.
+  // GEO-6/GEO-3: comparison table for comparison-type articles, and for any
+  // title that sets up a comparison ("best", "vs", "top 5").
   const type = post.postType || '';
-  if (['product-comparison', 'buying-guide', 'product-roundup'].includes(type) && !/^\s*\|.*\|\s*$/m.test(body)) {
-    issues.push(`no comparison table (${type})`);
+  const titleCue = `${post.title || ''}\n${post.seoTitle || ''}`.match(COMPARISON_TITLE);
+  if (!hasMarkdownTable(body)) {
+    if (['product-comparison', 'buying-guide', 'product-roundup'].includes(type)) issues.push(`no comparison table (${type})`);
+    else if (titleCue) issues.push(`no comparison table (title says "${titleCue[0]}")`);
   }
 
   // Sources and URL provenance.
@@ -447,6 +471,16 @@ export function checkNxtsmarthomeContent(post, { allowedUrls = null } = {}) {
   if (/\\n/.test(body)) issues.push('escaped newlines (\\n) in the text');
 
   return issues;
+}
+
+/** Question-form H2s required for an article with n H2s (Sources/FAQ excluded). */
+export function questionH2Required(n) {
+  return Math.max(1, Math.min(QUESTION_H2_MIN, Math.ceil(n * QUESTION_H2_SHARE)));
+}
+
+/** A Markdown table: a header row followed by a |---| separator row. */
+export function hasMarkdownTable(markdown) {
+  return /^\s*\|.*\|\s*\n\s*\|?\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)+\|?\s*$/m.test(String(markdown));
 }
 
 /** Distinct external source links in the "## Sources" section (CQ2). */
@@ -558,6 +592,285 @@ const STOP = new Set(('a an and are as at be best by can do does for from guide 
 function titleWords(s) {
   const w = String(s).toLowerCase().replace(/\b20\d\d\b/g, '').match(/[a-z0-9]+/g) ?? [];
   return new Set(w.filter((x) => x.length > 1 && !STOP.has(x)).map((x) => (x.length > 3 && x.endsWith('s') && !x.endsWith('ss') ? x.slice(0, -1) : x)));
+}
+
+/*
+ * Research with OpenRouter web search (the writer's default provider since
+ * Oct 2026; the Gemini account has no credit). The `web` plugin runs a search,
+ * puts the results in front of the model, and returns them as
+ * message.annotations of type url_citation ({ url, title, content,
+ * start_index, end_index }). Same result shape as researchWithGemini():
+ * { json: { facts, officialSources }, searchedUrls }.
+ *
+ * Pricing (openrouter.ai/docs/features/web-search, checked 17 Oct 2026): the
+ * Exa engine costs $0.007 per request (instant/fast/auto) and includes up to
+ * 10 results, $0.001 per extra result; Parallel $0.001 (turbo/fast) or $0.005
+ * (basic/advanced) per request; Perplexity $0.005 per request; "native" search
+ * (OpenAI, Anthropic, Perplexity, xAI models) is passed through at the
+ * provider's own price. All plus normal LLM token costs. Exa is the default
+ * here for a predictable cost; OPENROUTER_SEARCH_ENGINE overrides it.
+ */
+export async function researchWithOpenRouter({ apiKey, model, prompt, maxResults = 8, engine = 'exa', log = console.log }) {
+  const plugin = { id: 'web', max_results: maxResults };
+  if (engine && engine !== 'auto') plugin.engine = engine;
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${apiKey}`,
+      'HTTP-Referer': SITE_ORIGIN,
+      'X-Title': 'NXT Smart Home writer',
+    },
+    body: JSON.stringify({
+      model,
+      plugins: [plugin],
+      usage: { include: true },
+      max_tokens: 4000,
+      messages: [
+        { role: 'system', content: 'You research facts for an Australian smart-home site. Use the web search results. Report only what the pages actually state, each with the URL of the page it came from. Return strict JSON only.' },
+        {
+          role: 'user',
+          content: `${prompt}\n\nReturn STRICT JSON only, no prose:\n{ "facts": [{ "fact": string, "url": string }], "officialSources": [{ "name": string, "url": string }] }\n- facts: 8-20 short, specific statements, each with the exact URL of the search result it came from.\n- officialSources: the manufacturer, regulator and official pages among the search results, with their exact URLs.\n- Use only URLs from the search results, character for character.`,
+        },
+      ],
+    }),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${text.slice(0, 300)}`);
+  const msg = JSON.parse(text);
+  const message = msg.choices?.[0]?.message ?? {};
+  const usage = msg.usage ?? {};
+  const cited = [];
+  for (const a of message.annotations ?? []) {
+    const url = a?.url_citation?.url ?? a?.url;
+    if (a?.type === 'url_citation' && url && /^https?:\/\//i.test(url) && !cited.includes(url)) cited.push(url);
+  }
+  const { parseAiJson } = await import('./parse-ai-json.mjs');
+  let parsed = {};
+  try {
+    parsed = parseAiJson(String(message.content ?? ''), { providerName: 'OpenRouter research' }) ?? {};
+  } catch (err) {
+    log(`  research : could not parse OpenRouter JSON (${String(err.message).slice(0, 120)})`);
+  }
+  // A URL the model wrote is kept only if it is one the search returned, or on
+  // a host the search returned (a sibling page there); anything else may be
+  // invented, so its fact loses the link and it is not a source.
+  const searchedUrls = new Set(cited.map(normaliseUrl));
+  const hosts = new Set(cited.map(hostOf).filter(Boolean));
+  const trusted = (url) => typeof url === 'string' && /^https?:\/\//i.test(url) && (searchedUrls.has(normaliseUrl(url)) || hosts.has(hostOf(url)));
+  const facts = (Array.isArray(parsed.facts) ? parsed.facts : [])
+    .filter((f) => f && typeof f.fact === 'string' && f.fact.trim())
+    .map((f) => ({ fact: f.fact.trim(), url: trusted(f.url) ? f.url : '' }));
+  const officialSources = (Array.isArray(parsed.officialSources) ? parsed.officialSources : [])
+    .filter((s) => s && trusted(s.url))
+    .map((s) => ({ name: String(s.name || hostOf(s.url)), url: s.url }));
+  for (const url of cited) {
+    if (!officialSources.some((s) => normaliseUrl(s.url) === normaliseUrl(url))) officialSources.push({ name: hostOf(url), url });
+  }
+  for (const x of [...facts, ...officialSources]) if (x.url) searchedUrls.add(normaliseUrl(x.url));
+  return { json: { facts, officialSources }, searchedUrls, citedUrls: cited, usage, model: msg.model || model };
+}
+
+function hostOf(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+/** One line describing OpenRouter's usage/cost block, or '' when absent. */
+export function openRouterUsageLine(usage) {
+  if (!usage || typeof usage !== 'object') return '';
+  const parts = [];
+  if (usage.cost != null) parts.push(`cost US$${Number(usage.cost).toFixed(4)}`);
+  if (usage.prompt_tokens != null) parts.push(`${usage.prompt_tokens} in`);
+  if (usage.completion_tokens != null) parts.push(`${usage.completion_tokens} out tokens`);
+  const web = usage.server_tool_use?.web_search_requests;
+  if (web != null) parts.push(`${web} web search request(s)`);
+  if (usage.cost_details?.upstream_inference_cost != null) parts.push(`upstream US$${Number(usage.cost_details.upstream_inference_cost).toFixed(4)}`);
+  return parts.join(', ');
+}
+
+/*
+ * Product boxes only for products the article names (CLAUDE.md rule 8, audit
+ * Oct 2026: SmartThings Station, Homey Pro, Aqara M100 and Hue Bridge boxed in
+ * kitchen, bedroom, nursery and garage articles that never discussed them).
+ * A product counts as mentioned when the text outside markers and link targets
+ * names it: its name ("Hub M100", "SmartThings Station"), brand + name
+ * ("Homey Pro", "Philips Hue Bridge"), or brand/series + a model number
+ * ("Aqara ... M100", "Tapo P110"). Catalogue names are scraped retail strings,
+ * so the name is cut at the first descriptor ("Tapo C220 2K Pan/Tilt Security
+ * Camera" -> "Tapo C220").
+ */
+const NAME_GENERIC = new Set(('smart home wi fi wifi plug plugs socket camera cam cameras security speaker display doorbell video bulb bulbs '
+  + 'light lights lamp strip lightstrip sensor sensors switch switches controller control monitor monitoring power portable '
+  + 'outdoor indoor pan tilt kit pack set new gen generation wireless matter thread zigbee z wave bluetooth energy multi protocol '
+  + 'gateway hub bridge module automation the a an hd 4k 2k app compatible system box').split(' '));
+const NAME_CONNECTOR = new Set('with for and or by in to of'.split(' '));
+const NOT_MODEL = /^(?:\d+(?:st|nd|rd|th|k|mp|w|wh|kwh|mah|v|a|mm|cm|m|p|hz|ghz|mhz|in|pcs|pk|pack|x|l|gb|tb)|(?:e|es|b|gu|mr)\d{2}|v\d+|gen\d+|ip\d{2}|wifi\d|usb\d?c?|20\d\d)$/;
+const nameTokens = (s) => String(s || '').toLowerCase().replace(/\([^)]*\)/g, ' ').match(/[a-z0-9]+/g) ?? [];
+const isModelToken = (t) => /[a-z]/.test(t) && /\d/.test(t) && !NOT_MODEL.test(t);
+const phraseRe = (tokens) => tokens.map((t) => t.replace(/[^a-z0-9]/g, '')).join('[^a-z0-9]+');
+
+export function productMentionPatterns(product) {
+  const brand = nameTokens(product?.brand);
+  const rawName = String(product?.name || '').replace(/\([^)]*\)/g, ' ');
+  const cut = rawName.split(/\s[-–—|]\s|,|;/)[0];
+  let name = nameTokens(cut);
+  // "TP-Link" + "Tapo ..." and names that repeat the brand.
+  while (name.length && brand.length && name[0] === brand[0] && name.length > 1) name = name.slice(brand.length > 1 && name[1] === brand[1] ? 2 : 1);
+  const head = [];
+  for (const t of name) {
+    if (NAME_CONNECTOR.has(t) && head.length) break;
+    if (head.length && NAME_GENERIC.has(t) && head.some((h) => !NAME_GENERIC.has(h))) break;
+    head.push(t);
+    if (/\d/.test(t)) break;
+  }
+  const meaningful = (tokens) => tokens.some((t) => /[a-z]/.test(t) && !NAME_GENERIC.has(t) && !NAME_CONNECTOR.has(t));
+  const phrases = [];
+  const add = (tokens) => {
+    if (tokens.length >= 2 && meaningful(tokens) && !phrases.some((p) => p.join(' ') === tokens.join(' '))) phrases.push(tokens);
+  };
+  const headOk = head.length && head.some((t) => !['smart', 'home', 'wi', 'fi', 'wifi', 'the', 'matter', 'zigbee', 'thread'].includes(t));
+  if (headOk) {
+    if (meaningful(head)) add(head);
+    if (brand.length) add([...brand, ...head]);
+    const last = brand[brand.length - 1];
+    if (brand.length > 1 && last && last.length >= 3 && !NAME_GENERIC.has(last) && last !== 'link') add([last, ...head]);
+  }
+  if (name.length <= 8 && meaningful(name)) add(name);
+  const res = phrases.map((p) => new RegExp(`(?<![a-z0-9])${phraseRe(p)}(?![a-z0-9])`, 'i'));
+  // brand or series word + up to two words + model number.
+  const models = name.filter(isModelToken);
+  const prefixes = [...new Set([brand.join(' '), ...brand.filter((b) => b.length >= 3 && !NAME_GENERIC.has(b) && b !== 'link'),
+    ...name.filter((t) => !isModelToken(t) && !NAME_GENERIC.has(t) && !NAME_CONNECTOR.has(t) && t.length >= 3 && !/\d/.test(t))])].filter(Boolean);
+  for (const m of models) {
+    for (const pre of prefixes) {
+      res.push(new RegExp(`(?<![a-z0-9])${phraseRe(pre.split(' '))}(?:[^a-z0-9]+[a-z0-9]+){0,2}?[^a-z0-9]+${m}(?![a-z0-9])`, 'i'));
+    }
+  }
+  return res;
+}
+
+/** Text with product markers, link targets and bare URLs blanked (same length, so indexes hold). */
+export function mentionText(markdown) {
+  const blank = (m) => ' '.repeat(m.length);
+  return String(markdown || '')
+    .replace(/::product:[a-z0-9-]+::/gi, blank)
+    .replace(/\]\([^)]*\)/g, (m) => `]${blank(m.slice(1))}`)
+    .replace(/https?:\/\/[^\s)\]"'>`]+/g, blank);
+}
+
+/** Index of the first mention of the product in the text (markers and URLs ignored), or -1. */
+export function productMentionIndex(product, markdown) {
+  const text = mentionText(markdown);
+  let best = -1;
+  for (const re of productMentionPatterns(product)) {
+    const m = re.exec(text);
+    if (m && (best < 0 || m.index < best)) best = m.index;
+  }
+  return best;
+}
+
+export function isProductMentioned(product, markdown) {
+  return productMentionIndex(product, markdown) >= 0;
+}
+
+/**
+ * Removes ::product:<slug>:: markers whose product the text never names.
+ * products: catalogue records ({ slug, name, brand }). Unknown slugs are kept
+ * as they are (the caller decides about those).
+ */
+export function filterProductMarkers(markdown, products) {
+  const bySlug = new Map((products ?? []).map((p) => [String(p.slug).toLowerCase(), p]));
+  const kept = [];
+  const dropped = [];
+  const text = String(markdown || '');
+  const out = text.replace(/[ \t]*::product:([a-z0-9-]+)::[ \t]*/gi, (m, slug) => {
+    const p = bySlug.get(slug.toLowerCase());
+    if (!p) return m;
+    if (isProductMentioned(p, text)) {
+      kept.push(p.slug);
+      return m;
+    }
+    dropped.push(p.slug);
+    return '';
+  });
+  return { text: out.replace(/\n{3,}/g, '\n\n'), kept, dropped };
+}
+
+/*
+ * Image alt text (audit Oct 2026: media alt was the filename with hyphens as
+ * spaces). Cover: the article title. Gallery: the section the image
+ * illustrates, "<section> — illustration", sentence case, at most ALT_MAX
+ * characters. Never says "AI".
+ */
+export function imageAltText({ kind = 'cover', title = '', seoTitle = '', prompt = '', sections = [], body = '', exclude = [] } = {}) {
+  const clean = (s) => String(s || '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_`#]/g, '').replace(/\bAI[- ]generated\b|\bAI\b/g, '').replace(/\s+/g, ' ').trim();
+  if (kind === 'cover') return clip(clean(title) || clean(seoTitle) || 'Smart home', ALT_MAX);
+  const stop = new Set('a an and are as at be by can do does for from how in into is it its of on or the to what when where which why will with you your smart home australian australia'.split(' '));
+  const toks = (s) => new Set((String(s).toLowerCase().match(/[a-z0-9]+/g) ?? []).filter((w) => w.length > 2 && !stop.has(w)).map((w) => w.replace(/s$/, '')));
+  const want = toks(prompt);
+  let best = null;
+  let bestScore = 0;
+  for (const s of sections) {
+    if (exclude.includes(s)) continue;
+    const quoted = String(prompt).includes(`"${s}"`) ? 100 : 0;
+    let score = quoted;
+    for (const w of toks(s)) if (want.has(w)) score += 1;
+    if (score > bestScore) { best = s; bestScore = score; }
+  }
+  let subject = best ? clean(best) : '';
+  if (!subject) {
+    subject = clean(String(prompt).split(/(?<=[.!?])\s/)[0])
+      .replace(/^(?:an?\s+)?(?:editorial\s+)?(?:hero\s+)?(?:photo(?:graph)?|image|shot|picture)s?\s+(?:of|illustrating|showing|for)\s+(?:the concept of\s+)?/i, '')
+      .replace(/\b(?:photorealistic|editorial(?: photography)?(?: style)?|shot on a \d+mm lens)\b,?/gi, '')
+      .replace(/["“”]/g, '')
+      .replace(/[\s,.;:]+$/, '')
+      .trim();
+  }
+  if (!subject) subject = clean(title) || 'Smart home';
+  const sentence = sentenceCase(subject.replace(/["“”]/g, ''), body);
+  return clip(`${sentence} — illustration`, ALT_MAX, ' — illustration');
+}
+
+const ALWAYS_PROPER = new Set('australia australian aussie victoria queensland tasmania sydney melbourne brisbane perth adelaide hobart darwin canberra'.split(' '));
+const SMALL_WORDS = new Set('a an and are as at be but by can do does for from how i if in into is it its of on or should the to vs what when where which who why will with you your'.split(' '));
+
+/*
+ * Sentence case that keeps names: a Capitalised word stays capitalised only
+ * when the body's prose (headings left out) uses it capitalised mid-sentence
+ * at least as often as in lower case ("Aqara", "Google Home"); otherwise it
+ * is lowered ("Battery Life And Power" -> "Battery life and power").
+ */
+export function sentenceCase(text, body = '') {
+  const prose = String(body || '').split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+  const count = (re) => (prose.match(re) ?? []).length;
+  let first = true;
+  return String(text).replace(/[A-Za-z][A-Za-z'’]*/g, (w) => {
+    if (first) {
+      first = false;
+      return w[0].toUpperCase() + w.slice(1);
+    }
+    if (!/^[A-Z][a-z'’]+$/.test(w)) return w; // acronyms, camelCase brands, already lower
+    const lower = w.toLowerCase();
+    if (SMALL_WORDS.has(lower)) return lower;
+    if (ALWAYS_PROPER.has(lower)) return w;
+    const esc = w.replace(/[’']/g, "['’]");
+    const capsMid = count(new RegExp(`[a-z0-9,;:)]\\s+${esc}(?![A-Za-z])`, 'g'));
+    const lowers = count(new RegExp(`(?<![A-Za-z])${esc.toLowerCase()}(?![A-Za-z])`, 'g'));
+    return capsMid > 0 && capsMid >= lowers ? w : lower;
+  });
+}
+
+function clip(text, max, suffix = '') {
+  const t = String(text).replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  const room = max - suffix.length;
+  const base = suffix && t.endsWith(suffix) ? t.slice(0, -suffix.length) : t;
+  const cut = base.slice(0, room).replace(/\s+\S*$/, '').replace(/[\s,;:.-]+$/, '');
+  return `${cut || base.slice(0, room)}${suffix}`;
 }
 
 /*

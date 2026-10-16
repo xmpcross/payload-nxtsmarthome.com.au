@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Run the NXT Smart Home article generator.
 # Usage: bash run.sh [options]   or   ./run.sh [options]
+# AI_PROVIDER defaults to openrouter (OPENROUTER_API_KEY in .env.local; the
+# Gemini account has no credit). Set AI_PROVIDER=gemini|anthropic|openai to override.
+# Research then uses OpenRouter web search (OPENROUTER_RESEARCH_MODEL).
 # All flags are passed through to generate-post.ts.
 set -euo pipefail
 
@@ -30,6 +33,8 @@ symlink_pkg "@payloadcms"
 symlink_pkg "@fal-ai"
 symlink_pkg "@lexical"
 symlink_pkg "@types"
+
+export AI_PROVIDER="${AI_PROVIDER:-openrouter}"
 
 exec "$APP_MODS/.bin/tsx" \
   --env-file="$APP_DIR/.env.local" \

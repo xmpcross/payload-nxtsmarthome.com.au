@@ -12,6 +12,7 @@ import fsP from 'node:fs/promises';
 import { getPayload } from 'payload';
 import config from '../../payload.config';
 import { fal } from '@fal-ai/client';
+import * as rules from './content-rules.mjs';
 
 const postId = Number(process.argv[2]);
 if (!postId) { console.error('Usage: tsx add-images-to-post.ts <post-id>'); process.exit(1); }
@@ -111,7 +112,9 @@ Return STRICT JSON only:
     const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
     const parsed = JSON.parse(fence ? fence[1] : raw.trim());
     if (parsed?.cover && Array.isArray(parsed?.gallery) && parsed.gallery.length >= 2) {
-      return { cover: String(parsed.cover), gallery: [String(parsed.gallery[0]), String(parsed.gallery[1])] };
+      // The model's prompts must also forbid text in the image.
+      const noText = (p: unknown) => (/\bno text\b/i.test(String(p)) ? String(p) : `${String(p).trim()} ${NO_TEXT}`);
+      return { cover: noText(parsed.cover), gallery: [noText(parsed.gallery[0]), noText(parsed.gallery[1])] };
     }
   } catch {}
 
@@ -185,10 +188,20 @@ const [coverUrl, g1Url, g2Url] = await Promise.all([
   generateImage(prompts.gallery[1], 'landscape_4_3'),
 ]);
 
+// Descriptive alt text: cover = article title; gallery = the section each image illustrates.
+const altSections = (content.match(/^##\s+(.+)/gm) ?? [])
+  .map(h => h.replace(/^##\s+/, '').replace(/\*\*/g, '').trim())
+  .filter(h => !/^(sources|references|faq|frequently asked)/i.test(h));
+const altBase = { title: post.title, seoTitle: post.seoTitle, sections: altSections, body: content };
+const coverAlt = rules.imageAltText({ ...altBase, kind: 'cover', prompt: prompts.cover });
+const g1Alt = rules.imageAltText({ ...altBase, kind: 'gallery', prompt: prompts.gallery[0] });
+let g2Alt = rules.imageAltText({ ...altBase, kind: 'gallery', prompt: prompts.gallery[1], exclude: altSections.filter(s => g1Alt.toLowerCase().startsWith(s.toLowerCase().slice(0, 20))) });
+if (g2Alt === g1Alt) g2Alt = rules.imageAltText({ ...altBase, kind: 'gallery', prompt: prompts.gallery[1], sections: [] });
+
 const [coverId, g1Id, g2Id] = await Promise.all([
-  saveImage(payload, coverUrl, `${base}-cover`, String(post.title || '')),
-  saveImage(payload, g1Url,   `${base}-gallery-1`, `${String(post.title || '')} — section image 1`),
-  saveImage(payload, g2Url,   `${base}-gallery-2`, `${String(post.title || '')} — section image 2`),
+  saveImage(payload, coverUrl, `${base}-cover`, coverAlt),
+  saveImage(payload, g1Url,   `${base}-gallery-1`, g1Alt),
+  saveImage(payload, g2Url,   `${base}-gallery-2`, g2Alt),
 ]);
 
 await payload.update({
