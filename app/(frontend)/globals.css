@@ -1059,8 +1059,8 @@
     h2 {
       font-size: 1.625rem; /* 26px */
       line-height: 1.308;  /* 34 / 26 */
-      margin-top: 2.5rem;  /* 40px */
-      margin-bottom: 1rem; /* 16px */
+      margin-top: 0;
+      margin-bottom: 0;
       font-weight: 600;
       letter-spacing: -0.2px;
     }
@@ -1118,23 +1118,6 @@
         font-size: 1.5rem;   /* 24px */
         line-height: 1.333;  /* 32 / 24 */
       }
-    }
-  }
-
-  /*
-   * Introduction paragraph: the first <p> of the first prose segment.
-   * ArticleBody.tsx marks the first segment with .article-intro-section.
-   * Mobile: 18 / 29; desktop: 20 / 32.
-   */
-  #article-body .article-intro-section > p:first-child {
-    font-size: 1.125rem; /* 18px */
-    line-height: 1.611;  /* 29 / 18 */
-  }
-
-  @media (min-width: 1024px) {
-    #article-body .article-intro-section > p:first-child {
-      font-size: 1.25rem; /* 20px */
-      line-height: 1.6;   /* 32 / 20 */
     }
   }
 
@@ -1755,6 +1738,12 @@ h1, h2, h3, h4, h5, h6 {
    <p> or link inherit it. */
 :is(h1, h2, h3, h4, h5, h6) {
   font-weight: 700;
+}
+
+/* Every page H1 at 2.5rem on all breakpoints. User request, 17 Oct 2026.
+   Unlayered, so it wins over the text-* size utilities on each page's h1. */
+h1 {
+  font-size: 2.5rem;
 }
 
 /* "Where to buy" retailer list the AI writer appends to articles

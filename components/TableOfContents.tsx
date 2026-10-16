@@ -1,12 +1,13 @@
 import type { Heading } from '@/lib/content';
 
 /**
- * "Contents" box on the single post page: a bulleted list of the article's
+ * "Contents" box on the single post page: an unbulleted list of the article's
  * section (h2) headings, each an anchor to its heading.
  *
- * Same design as bestlooking.skin's ArticleContents (user request, 24 Sep
- * 2026): a light blue panel (#eef2ff) with 12px corners, a 1.35rem bold title,
- * disc bullets and semibold, underlined links in near-black. h3s are left out,
+ * Based on bestlooking.skin's ArticleContents (user request, 24 Sep 2026): a
+ * light blue panel (#eef2ff) with 12px corners, a 1.35rem bold title and
+ * semibold, underlined links in near-black. Bullets were removed on user
+ * request (17 Oct 2026); items sit flush with the title. h3s are left out,
  * as there, so the list stays a short outline. Fewer than three sections is not
  * worth a contents list, so it renders nothing.
  */
@@ -25,7 +26,7 @@ export default function TableOfContents({ headings }: { headings: Heading[] }) {
       >
         Contents
       </p>
-      <ul className="list-disc space-y-2.5 pl-[1.4rem] marker:text-[#0e0e0f] dark:marker:text-slate-300">
+      <ul className="space-y-2.5">
         {items.map((heading) => (
           <li key={heading.id} className="text-[16px] leading-[1.5625] text-[#0e0e0f] dark:text-slate-100">
             <a
