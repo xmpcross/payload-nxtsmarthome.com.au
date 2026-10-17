@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import AffiliateLink from '@/components/AffiliateLink';
 import ProductAccordion from '@/components/ProductAccordion';
+import PriceHistory from '@/components/PriceHistory';
 import ProductHighlights from '@/components/ProductHighlights';
 import ProductReviews from '@/components/ProductReviews';
 import RelatedProducts from '@/components/RelatedProducts';
@@ -14,7 +15,8 @@ import { AFFILIATE_ENABLED } from '@/lib/affiliate';
 import { getAllProducts, getAllTopProducts, getCuratedProduct, getProductBySlug, getShoppableTopProducts, getTopProductBySlug, isIndexableProduct } from '@/lib/products';
 import { editorialParts, ProductResearchNotes, ProductSources } from '@/components/ProductEditorial';
 import { breadcrumbJsonLd, metaDescription, pageAlternates, pageTitle, productJsonLd } from '@/lib/seo';
-import { retailerReviews } from '@/lib/review-sources';
+import { retailerReviews, reviewSummary } from '@/lib/review-sources';
+import StarRating from '@/components/StarRating';
 import { responsiveImg } from '@/lib/image';
 import { site } from '@/lib/site';
 
@@ -150,6 +152,7 @@ export default async function ProductDetailPage({
     .filter((r) => typeof r.priceAud === 'number' && r.priceAud > 0)
     .sort((a, b) => (a.priceAud || 0) - (b.priceAud || 0));
   const cheapest = pricedRetailers[0];
+  const summary = reviewSummary(product);
   const ctaRetailer = cheapest || primaryRetailer;
 
   return (
@@ -191,7 +194,7 @@ export default async function ProductDetailPage({
               {/* Gallery. One image per product in this dataset, so the
                   reference's thumbnail rail has nothing to show and is omitted
                   rather than faked with duplicates. */}
-              <div className="order-2 flex min-w-0 items-center justify-center rounded-lg bg-white p-4 lg:order-none dark:bg-slate-800">
+              <div className="order-2 flex min-w-0 items-center justify-center rounded-lg bg-white p-4 lg:order-none dark:bg-[#ffffff]">
                 <img
                   {...responsiveImg(product.image || '/og-default.png', 640, '(max-width: 768px) 100vw, 480px')}
                   alt={brandedName(product)}
@@ -213,10 +216,26 @@ export default async function ProductDetailPage({
                   sat at y=627px and the price near the page bottom). */}
               <div className="order-1 min-w-0 lg:order-none">
                 {/* Brand + model in the H1: "Hub M100" alone said nothing about
-                    whose hub it is. Size comes from the global h1 rule. */}
-                <h1 className="mb-2.5 font-bold leading-tight text-[#1d252c] dark:text-white">
+                    whose hub it is. Size is 1.3rem (user request, 17 Oct 2026) via
+                    .product-title in globals.css, which overrides the global h1 rule. */}
+                {/* The product type, above the title (user request, 17 Oct 2026; it was only a row
+                    in Additional Info). Falls back to the category when a product has no type. */}
+                {product.subCategory || product.categoryName ? (
+                  <p className="mb-1 text-xs font-semibold tracking-wide text-[#55555a] uppercase dark:text-slate-400">
+                    {product.subCategory || product.categoryName}
+                  </p>
+                ) : null}
+                <h1 className="product-title mb-1.5 font-bold leading-tight text-[#1d252c] dark:text-white">
                   {brandedName(product)}
                 </h1>
+                {/* Stars only when the product has reviews, counted from the reviews block below. */}
+                {summary.reviewCount > 0 ? (
+                  <div className="mb-2.5">
+                    <StarRating rating={summary.rating} count={summary.reviewCount} />
+                  </div>
+                ) : (
+                  <div className="mb-1" />
+                )}
 
                 {/* Price and primary CTA for phones; from lg the purchase panel
                     on the right shows them beside the gallery. */}
@@ -263,12 +282,7 @@ export default async function ProductDetailPage({
                       </Link>
                     </span>
                   ) : null}
-                  {product.subCategory ? (
-                    <span>
-                      <span className="font-semibold text-[#1d252c] dark:text-slate-200">Type:</span>{' '}
-                      {product.subCategory}
-                    </span>
-                  ) : null}
+                  {/* The "Type:" line was here; the type now sits above the title (user request, 17 Oct 2026). */}
                 </div>
 
                 {/*
@@ -291,8 +305,10 @@ export default async function ProductDetailPage({
 
                       Bulleted copy is rendered as a real list. It arrives as
                       lines beginning with "•", and a paragraph would print those
-                      characters as text — and, with line-clamp, run the bullets
-                      together mid-sentence.
+                      characters as text and run the bullets together mid-sentence.
+
+                      The short description is shown in full (no line-clamp): at 55-75
+                      words it was being cut off at five lines.
                     */}
                     {product.shortDescription && bulletsOf(product.shortDescription).length > 1 ? (
                       <ul className="space-y-1.5 leading-relaxed text-[#55555a] dark:text-slate-300">
@@ -307,7 +323,7 @@ export default async function ProductDetailPage({
                         ))}
                       </ul>
                     ) : (
-                      <p className="line-clamp-5 leading-relaxed text-[#55555a] dark:text-slate-300">
+                      <p className="leading-relaxed text-[#55555a] dark:text-slate-300">
                         {product.shortDescription || product.description || product.bestFor}
                       </p>
                     )}
@@ -386,6 +402,9 @@ export default async function ProductDetailPage({
             </div>
           </aside>
         </div>
+
+        {/* Price history: lowest recorded price per day, above the retailer table */}
+        <PriceHistory productName={brandedName(product)} retailers={product.retailers} />
 
         {/* Retailer Price Comparison Table */}
         <RetailerPriceTable

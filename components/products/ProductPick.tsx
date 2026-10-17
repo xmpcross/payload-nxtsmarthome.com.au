@@ -3,6 +3,8 @@ import AffiliateLink from '@/components/AffiliateLink';
 import { FOCUS } from '@/components/category/shared';
 import { articleHref, type Article } from '@/lib/content';
 import type { TopProduct } from '@/lib/products';
+import StarRating from '@/components/StarRating';
+import { reviewSummary } from '@/lib/review-sources';
 import { responsiveImg } from '@/lib/image'
 
 /**
@@ -41,6 +43,7 @@ export default function ProductPick({ product, guide }: { product: TopProduct; g
           {product.name}
         </Link>
       </h3>
+      {(() => { const s = reviewSummary(product); return <div className="mt-1.5"><StarRating rating={s.rating} count={s.reviewCount} /></div>; })()}
       {product.bestFor ? (
         <p className="mt-2 text-neutral-700 dark:text-neutral-300">
           <span className="font-semibold text-neutral-900 dark:text-white">Suits: </span>

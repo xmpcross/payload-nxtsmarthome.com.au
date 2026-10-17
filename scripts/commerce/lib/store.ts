@@ -7,7 +7,7 @@
  */
 import type { Payload } from 'payload'
 import type { Change, PlanOffer, PlanProduct, ProductPlan } from './plan'
-import { mergeSourceData } from './plan'
+import { appendHistory, mergeSourceData } from './plan'
 import type { LinkResult } from './link'
 
 export interface CatalogueProduct extends PlanProduct {
@@ -90,13 +90,15 @@ export async function loadCatalogue(payload: Payload, merchants: MerchantRow[]):
 
 export interface WriteResult { offersUpdated: number; offersAdded: number; pricesCleared: number; productsUpdated: number; errors: string[] }
 
-function offerPatch(c: Change, nowIso: string): Record<string, unknown> {
+function offerPatch(c: Change, nowIso: string, existing: unknown): Record<string, unknown> {
   if (c.kind === 'update' || c.kind === 'verified') {
     const price = c.kind === 'update' ? c.newPrice : c.price
+    const prior = existing && typeof existing === 'object' ? (existing as Record<string, unknown>).history : undefined
+    const history = price != null ? { history: appendHistory(prior, price, nowIso) } : {}
     return c.verify
       // A ZenRows check of the offer's own page: record the verification; the price source changes only when the price did.
-      ? { checkedAt: nowIso, verifiedAt: nowIso, verifiedPrice: price ?? undefined, availability: c.availability, ...(c.kind === 'update' ? { source: c.source } : {}) }
-      : { checkedAt: nowIso, source: c.source, availability: c.availability, sellerTitle: c.sellerTitle }
+      ? { checkedAt: nowIso, verifiedAt: nowIso, verifiedPrice: price ?? undefined, availability: c.availability, ...history, ...(c.kind === 'update' ? { source: c.source } : {}) }
+      : { checkedAt: nowIso, source: c.source, availability: c.availability, sellerTitle: c.sellerTitle, ...history }
   }
   return {}
 }
@@ -113,7 +115,7 @@ export async function applyPlans(payload: Payload, plans: ProductPlan[], catalog
       try {
         if (c.kind === 'update' || c.kind === 'verified') {
           const fresh = await payload.findByID({ collection: 'offers', id: c.offerId, depth: 0, overrideAccess: true })
-          const sourceData = mergeSourceData(fresh.sourceData, offerPatch(c, nowIso))
+          const sourceData = mergeSourceData(fresh.sourceData, offerPatch(c, nowIso, fresh.sourceData))
           if (!sourceData) { out.errors.push(`offer #${c.offerId}: sourceData is not an object; left alone`); continue }
           const data: Record<string, unknown> = { sourceData }
           if (c.kind === 'update') {
@@ -128,7 +130,7 @@ export async function applyPlans(payload: Payload, plans: ProductPlan[], catalog
             data: {
               label: `${product.name} — ${c.retailer}`, product: product.id, merchant: c.merchantId, url: c.url, priceAud: c.price,
               primary: false, deepLink: true, active: true, order: c.order,
-              sourceData: { checkedAt: nowIso, source: c.source, availability: c.availability, sellerTitle: c.sellerTitle,
+              sourceData: { checkedAt: nowIso, source: c.source, availability: c.availability, sellerTitle: c.sellerTitle, history: appendHistory(undefined, c.price, nowIso),
                 ...(c.source === 'zenrows' ? { verifiedAt: nowIso, verifiedPrice: c.price } : {}) },
             },
           })

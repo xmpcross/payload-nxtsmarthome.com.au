@@ -10,9 +10,9 @@ import { joinNames, MIN_AGGREGATE_REVIEWS, retailerReviews } from '@/lib/review-
  * histogram and review themes across the top, then a grid of review cards and
  * a call to action.
  *
- * Only reviews from allow-listed sources are shown (lib/review-sources.ts):
- * Australian retailers, the brand's own AU site, and the brand's global store
- * labelled as such. The block says whose they are and that we did not write
+ * Reviews from every source are shown (lib/review-sources.ts, changed 17 Oct 2026),
+ * each labelled with where it was posted: Australian retailers, the brand's own
+ * AU site and the brand's global store first, then other sources by domain. The block says whose they are and that we did not write
  * them. No "Verified purchase" badge: these are syndicated, and we cannot
  * verify that anyone bought anything. Under MIN_VISIBLE_REVIEWS allowed
  * reviews the block does not render at all.
@@ -121,7 +121,8 @@ export default function ProductReviews({ product }: { product: TopProduct }) {
 
   const rating = aggregate?.rating;
   const reviewCount = aggregate?.count;
-  const from = joinNames(retailers);
+  // Many sources would make the heading a paragraph: name the first two and count the rest.
+  const from = retailers.length <= 3 ? joinNames(retailers) : `${joinNames(retailers.slice(0, 2))} and ${retailers.length - 2} other sources`;
 
   const primaryRetailer = product.retailers?.find((r) => r.primary) || product.retailers?.[0];
   const readMoreHref = product.reviewsUrl || primaryRetailer?.url;
@@ -131,7 +132,7 @@ export default function ProductReviews({ product }: { product: TopProduct }) {
     <section className="rounded-[8px] bg-white p-5 dark:bg-slate-800 sm:p-6">
       <h2 className="text-2xl font-bold text-[#1d252c] dark:text-white">What customers say at {from}</h2>
       <p className="mt-1 text-sm text-[#55555a] dark:text-slate-400">
-        Reviews written by customers of these retailers — not by NXT Smart Home, and not a test result.
+        Reviews written by customers of the stores named on each review — not by NXT Smart Home, and not a test result.
       </p>
 
       {/*
@@ -205,15 +206,16 @@ export default function ProductReviews({ product }: { product: TopProduct }) {
           <h3 className="text-base font-bold text-[#1d252c] dark:text-white">About these reviews</h3>
           <p className="mt-1.5 text-sm leading-relaxed text-[#1d252c] dark:text-slate-300">
             Customer reviews syndicated from {from}. We do not edit them, and we cannot confirm the
-            reviewers bought the product. Only Australian retailers and the brand&apos;s own store
-            are included; a brand&apos;s overseas store is marked &ldquo;global store&rdquo;.
+            reviewers bought the product. They come from retailers in Australia and overseas, and
+            each review says where it was posted; Australian sources are listed first and overseas
+            ones may not reflect Australian stock, pricing or warranty.
           </p>
           <p className="mt-2 text-[0.6875rem] text-[#55555a] dark:text-slate-400">
             Reviews may relate to a different variant, bundle or colour. Check the retailer&apos;s page
             for the exact item before buying.
           </p>
           <ul className="mt-4 flex flex-wrap gap-2">
-            {perRetailer.map(({ name, count }) => (
+            {perRetailer.slice(0, 8).map(({ name, count }) => (
               <li
                 key={name}
                 className="inline-flex items-center gap-1.5 rounded-md bg-[#e8f6ec] px-3 py-1.5 text-sm text-[#1d252c] dark:bg-emerald-500/15 dark:text-emerald-100"
@@ -224,6 +226,11 @@ export default function ProductReviews({ product }: { product: TopProduct }) {
                 {name} ({count})
               </li>
             ))}
+            {perRetailer.length > 8 ? (
+              <li className="inline-flex items-center rounded-md bg-neutral-100 px-3 py-1.5 text-sm text-[#55555a] dark:bg-slate-700 dark:text-slate-200">
+                +{perRetailer.length - 8} more sources
+              </li>
+            ) : null}
           </ul>
         </div>
       </div>

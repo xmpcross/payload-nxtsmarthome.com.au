@@ -32,6 +32,16 @@ export const site = {
      * Site settings > Operator overrides this default.
      */
     operator: 'FXN Holdings',
+    /** Australian Business Number of the operator (supplied by the owner, 17 Oct 2026). */
+    abn: '53 274 423 748',
+    /** Mailing address: a PO box, so it is not published as a street or "visit us" address. */
+    mailingAddress: {
+      poBox: 'PO Box 500',
+      locality: 'West Perth',
+      region: 'WA',
+      postcode: '6872',
+      country: 'AU',
+    },
     /** Editor, named on /about/ as the person responsible for the content. */
     editor: { name: 'Kritin Curtis', slug: 'kritin-curtis' },
   },

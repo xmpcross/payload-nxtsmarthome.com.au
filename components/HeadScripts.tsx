@@ -14,8 +14,9 @@
  * GA runs with Consent Mode v2 defaults denied until the cookie banner grants
  * them. Ahrefs Web Analytics loads on every page: Ahrefs describes it as
  * using zero cookies and collecting no personal data, so it is not gated.
- * No affiliate script loads: Sovrn and Takeads were removed on 6 Oct 2026 and
- * Geniuslink on 17 Oct 2026 (user request).
+ * The only affiliate script is Sovrn Commerce (VigLink), rendered by
+ * components/VigLink.tsx. Takeads was removed on 6 Oct 2026 and Geniuslink on
+ * 17 Oct 2026 (user request).
  *
  * AdSense, two stages (lib/ads.ts). With NEXT_PUBLIC_ADSENSE_CLIENT set, only
  * the google-adsense-account meta renders, which is what Google needs to

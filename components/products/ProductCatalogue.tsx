@@ -1,5 +1,6 @@
 'use client'
 
+import StarRating from '@/components/StarRating'
 import Link from 'next/link'
 import { useId, useState } from 'react'
 import AffiliateLink from '@/components/AffiliateLink'
@@ -14,6 +15,8 @@ export interface CatalogueItem {
   groupLabel: string
   retailerName?: string
   retailerUrl?: string
+  rating: number | null
+  reviewCount: number
 }
 
 const FOCUS =
@@ -115,6 +118,7 @@ export default function ProductCatalogue({
                 >
                   {item.name}
                 </Link>
+                <span className="mt-1 block"><StarRating rating={item.rating} count={item.reviewCount} /></span>
                 <span className="mt-0.5 block text-sm text-neutral-600 dark:text-neutral-400">
                   {item.brand} · {item.groupLabel}
                 </span>

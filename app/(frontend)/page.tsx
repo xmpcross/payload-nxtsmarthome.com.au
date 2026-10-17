@@ -6,6 +6,7 @@ import type { Metadata } from 'next'
 import JsonLd from '@/components/JsonLd'
 import HomeLanding, { type HomeProduct } from '@/components/home/HomeLanding'
 import { getShoppableTopProducts, isIndexableProduct } from '@/lib/products'
+import { reviewSummary } from '@/lib/review-sources'
 import { resolveAuthor } from '@/lib/authors'
 import { AFFILIATE_ENABLED } from '@/lib/affiliate'
 import { ADS_ENABLED } from '@/lib/ads'
@@ -54,10 +55,14 @@ export default async function HomePage() {
       low: offers[0].priceAud as number,
       lowAt: offers[0].name,
       retailers: offers.length,
+      // Counted from the reviews the product page shows (lib/review-sources.ts), so a card never
+      // claims a rating its page does not carry. No reviews: null, and the card draws outline stars.
+      ...reviewSummary(p),
     }
   })
   const retailerCount = new Set(shoppable.flatMap((p) => (p.retailers || []).map((r) => r.name))).size
-  const productCount = shoppable.filter(isIndexableProduct).length
+  // Every product listed on /products/ (user request, 17 Oct 2026: it was only the indexable ones, 216).
+  const productCount = shoppable.length
 
   const ed = resolveAuthor(site.organisation.editor.slug)
   // Says only what is true of the site today (AFFILIATE_ENABLED / ADS_ENABLED).

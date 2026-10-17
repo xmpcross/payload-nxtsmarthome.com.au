@@ -3,6 +3,7 @@ import Link from 'next/link';
 import JsonLd from '@/components/JsonLd';
 import ProductBrowser, { type BrowserCategory, type BrowserProduct } from '@/components/ProductBrowser';
 import { AFFILIATE_ENABLED } from '@/lib/affiliate';
+import { reviewSummary } from '@/lib/review-sources';
 import { FOCUS } from '@/components/category/shared';
 import { getAllArticles } from '@/lib/content';
 import { guideMentions } from '@/lib/product-mentions';
@@ -161,6 +162,7 @@ export default async function ProductsPage() {
       // Every retailer selling it; the price shown is the lowest known one.
       retailers: [...new Set((p.retailers || []).map((r) => r.name))],
       guide: mentions.get(p.slug)?.[0]?.title ?? null,
+      ...(() => { const s = reviewSummary(p); return { rating: s.rating, reviewCount: s.reviewCount }; })(),
     };
   });
   const browserCategories: BrowserCategory[] = categories

@@ -226,10 +226,10 @@ browser, on first load and again after each client-side navigation. Put the raw
 merchant URL in a product's `retailers[].url`, and do not paste pre-built
 affiliate links into content.
 
-Geniuslink is the only affiliate integration. Sovrn/VigLink (including the
-`sub_filter` injection in `/etc/nginx/snippets/nxtsmarthome-site.conf`) and Takeads
-were removed on 6 Oct 2026; the per-network IDs for Amazon, eBay, Walmart and CJ
-are not used either. Non-Amazon, non-eBay retailer links are plain, unaffiliated links.
+Sovrn Commerce (VigLink) is the only affiliate integration: `components/VigLink.tsx`
+inlines Sovrn's snippet at the end of `<body>`, and the key lives in
+`lib/affiliate.ts`. Takeads (6 Oct 2026) and Geniuslink (17 Oct 2026) were removed;
+the per-network IDs for Amazon, eBay, Walmart and CJ are not used either.
 
 Useful environment variables:
 

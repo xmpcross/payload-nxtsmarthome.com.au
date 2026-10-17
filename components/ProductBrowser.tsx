@@ -1,5 +1,6 @@
 'use client';
 
+import StarRating from '@/components/StarRating';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { responsiveImg } from '@/lib/image';
@@ -27,6 +28,9 @@ export type BrowserProduct = {
   lowAt: string | null;
   retailers: string[];
   guide: string | null;
+  /** Average of the reviews the product page shows, or null with none. */
+  rating: number | null;
+  reviewCount: number;
 };
 
 export type BrowserCategory = { slug: string; name: string; count: number; icon: string };
@@ -208,6 +212,7 @@ export default function ProductBrowser({
                   {p.category}
                 </span>
                 <span className="line-clamp-2 text-[15px] leading-snug font-bold text-neutral-900 dark:text-white">{p.name}</span>
+                <StarRating rating={p.rating} count={p.reviewCount} />
                 {p.bestFor ? (
                   <span className="line-clamp-2 text-[13px] leading-snug text-neutral-600 dark:text-neutral-400">Suits: {p.bestFor}</span>
                 ) : null}

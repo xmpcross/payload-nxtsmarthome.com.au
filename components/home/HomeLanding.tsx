@@ -4,7 +4,9 @@ import { articleHref, coverFor, formatDate, typeLabels } from '@/lib/content';
 import type { TCategory } from '@/data/categories';
 import type { TopProduct } from '@/lib/products';
 import { responsiveImg } from '@/lib/image';
+import { retailerLogoIsDark, retailerLogoSrc } from '@/lib/retailer-logos';
 import HeroDevices from './HeroDevices';
+import StarRating from '@/components/StarRating';
 
 /**
  * Home page (redesign approved 17 Oct 2026; preview built from the same data).
@@ -73,6 +75,9 @@ export type HomeProduct = {
   low: number;
   lowAt: string;
   retailers: number;
+  /** Average of the product's reviews, or null with none. */
+  rating: number | null;
+  reviewCount: number;
 };
 
 export default function HomeLanding({
@@ -309,13 +314,22 @@ export default function HomeLanding({
                 </span>
                 <span className="flex flex-1 flex-col gap-1.5 p-3.5">
                   <span className="text-[13px] text-neutral-600 dark:text-neutral-400">{p.category}</span>
-                  <span className="text-[15px] leading-snug font-bold text-neutral-900 dark:text-white">{p.name}</span>
-                  {p.bestFor ? <span className="text-[13px] leading-snug text-neutral-600 dark:text-neutral-400">Suits: {p.bestFor}</span> : null}
+                  <span className="line-clamp-2 text-[15px] leading-snug font-medium text-neutral-900 dark:text-white">{p.name}</span>
+                  <StarRating rating={p.rating} count={p.reviewCount} />
                   <span className="mt-auto flex items-baseline justify-between gap-2 border-t border-neutral-200 pt-2 text-[13px] text-neutral-600 dark:border-neutral-800 dark:text-neutral-400">
                     <span>
                       From <b className="text-lg text-neutral-900 tabular-nums dark:text-white">{money(p.low)}</b>
                       <br />
-                      at {p.lowAt}
+                      {p.lowAt && retailerLogoSrc(p.lowAt) ? (
+                        // The retailer's logo, not its name. Marks are drawn for a light background, so they sit
+                        // on white (black for white-lettered marks), in dark mode too.
+                        <span className={`mt-1 inline-flex h-7 items-center rounded px-1.5 ${retailerLogoIsDark(p.lowAt) ? 'bg-black' : 'bg-white'}`}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={retailerLogoSrc(p.lowAt) as string} alt={p.lowAt} height={20} loading="lazy" className="h-5 w-auto max-w-[96px] object-contain" />
+                        </span>
+                      ) : (
+                        <>at {p.lowAt}</>
+                      )}
                     </span>
                     <span className="tabular-nums">{p.retailers} retailers</span>
                   </span>

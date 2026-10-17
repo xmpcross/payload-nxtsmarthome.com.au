@@ -224,6 +224,21 @@ export function summarise(plans: ProductPlan[]) {
  * Merge a patch into an existing sourceData value without dropping any existing key.
  * Returns null when the existing value is not an object (never replaced).
  */
+export interface PricePoint { d: string; p: number }
+export const HISTORY_DAYS = 90
+
+/**
+ * Adds today's price to an offer's sourceData.history: one point per Sydney calendar day (a second
+ * check on the same day replaces the first), oldest first, capped at HISTORY_DAYS points.
+ */
+export function appendHistory(existing: unknown, price: number, nowIso: string): PricePoint[] {
+  const day = new Date(nowIso).toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' })
+  const prior = Array.isArray(existing)
+    ? existing.filter((x): x is PricePoint => x && typeof x.d === 'string' && typeof x.p === 'number' && x.d !== day)
+    : []
+  return [...prior, { d: day, p: price }].sort((a, b) => a.d.localeCompare(b.d)).slice(-HISTORY_DAYS)
+}
+
 export function mergeSourceData(existing: unknown, patch: Record<string, unknown>): Record<string, unknown> | null {
   if (existing == null) return { ...patch }
   if (typeof existing !== 'object' || Array.isArray(existing)) return null

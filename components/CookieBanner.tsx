@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { VIGLINK_KEY } from '@/lib/affiliate';
 import Link from 'next/link';
 import { ADS_ENABLED } from '@/lib/ads';
+import { VIGLINK_KEY } from '@/lib/affiliate';
 
 /**
  * Cookie consent banner.

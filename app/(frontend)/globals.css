@@ -1807,6 +1807,12 @@ h1 {
   font-size: 2.5rem;
 }
 
+/* The product page title (products/[slug]) at 1.3rem. User request, 17 Oct 2026. The class
+   selector out-ranks the h1 rule above; both are unlayered. */
+h1.product-title {
+  font-size: 1.3rem;
+}
+
 /* Article "Sources" list (the ul straight after the Sources h2): 14px, no
    bullets, flush left. User request, 17 Oct 2026. Unlayered so it beats the
    prose disc markers and indent. */

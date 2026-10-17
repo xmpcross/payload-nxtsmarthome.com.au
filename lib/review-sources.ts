@@ -21,11 +21,18 @@
  *     under MIN_AGGREGATE_REVIEWS they are not shown (nor emitted as
  *     AggregateRating structured data).
  *
+ *
+ * CHANGED 17 Oct 2026 (user request): a product with any review now shows its reviews block, whatever
+ * the source. Reviews from sources that are not Australian retailers or the brand's own store are
+ * still labelled with where they were posted (the domain), flagged `overseas`, and listed after the
+ * Australian ones. The aggregate score still needs MIN_AGGREGATE_REVIEWS reviews, and none of this
+ * reaches structured data (lib/seo.ts emits no aggregateRating and no Review).
+ *
  * No fs here: ProductReviews is a client component and imports this.
  */
 import type { ProductReview, TopProduct } from './products';
 
-export const MIN_VISIBLE_REVIEWS = 5;
+export const MIN_VISIBLE_REVIEWS = 1;
 export const MIN_AGGREGATE_REVIEWS = 20;
 
 /** Review source (a domain, as the catalogue labels it) -> Australian retailer name. */
@@ -76,22 +83,25 @@ export interface ReviewSource {
   retailer: string;
   /** A brand's global store rather than an Australian retailer. */
   global: boolean;
+  /** Neither an Australian retailer nor the brand's own store: shown, labelled by its domain. */
+  overseas?: boolean;
 }
 
-/** Where a review may be shown as coming from, or null when its source is not allowed. */
-export function reviewSource(review: ProductReview, brand?: string): ReviewSource | null {
+/** Where a review is shown as coming from. Any source is shown now; unlisted ones are labelled by domain. */
+export function reviewSource(review: ProductReview, brand?: string): ReviewSource {
   const key = sourceKey(review.sourceLabel);
-  if (!key) return null;
+  const other: ReviewSource = { retailer: key || 'another retailer', global: true, overseas: true };
+  if (!key) return other;
   const au = AU_REVIEW_RETAILERS[key];
   if (au) return { retailer: au, global: false };
 
   const token = brandToken(brand);
-  if (!token || NOT_A_BRAND_STORE.test(key)) return null;
+  if (!token || NOT_A_BRAND_STORE.test(key)) return other;
   // The part of the domain that names the site: "eufylife" in eufylife.com,
   // "google" in store.google.com, "switchbot" in switch-bot.com.
   const labels = key.replace(/\.(com|net|co|org)?\.?(au|uk|nz|ca)?$/, '').split('.');
   const name = (labels[labels.length - 1] ?? '').replace(/[^a-z0-9]/g, '');
-  if (!name.includes(token)) return null;
+  if (!name.includes(token)) return other;
 
   const brandName = String(brand).trim();
   return key.endsWith('.com.au')
@@ -111,15 +121,16 @@ export interface RetailerReviews {
 }
 
 export function retailerReviews(product: Pick<TopProduct, 'reviews' | 'brand'>): RetailerReviews {
-  const allowed = (product.reviews ?? []).flatMap((r) => {
-    const source = reviewSource(r, product.brand);
-    return source ? [{ ...r, retailer: source.retailer }] : [];
-  });
+  // Australian and brand-store sources first, then the rest; the order within each group is kept.
+  const allowed = (product.reviews ?? [])
+    .map((r) => { const source = reviewSource(r, product.brand); return { ...r, retailer: source.retailer, overseas: Boolean(source.overseas) }; })
+    .sort((a, b) => Number(a.overseas) - Number(b.overseas));
   const reviews = allowed.length >= MIN_VISIBLE_REVIEWS ? allowed : [];
 
   const byRetailer = new Map<string, number>();
   for (const r of reviews) byRetailer.set(r.retailer, (byRetailer.get(r.retailer) ?? 0) + 1);
-  const retailers = [...byRetailer.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+  const overseasNames = new Set(allowed.filter((r) => r.overseas).map((r) => r.retailer));
+  const retailers = [...byRetailer.entries()].sort((a, b) => Number(overseasNames.has(a[0])) - Number(overseasNames.has(b[0])) || b[1] - a[1]).map(([name]) => name);
 
   const rated = reviews.filter((r) => r.rating >= 1 && r.rating <= 5);
   const aggregate =
@@ -128,6 +139,16 @@ export function retailerReviews(product: Pick<TopProduct, 'reviews' | 'brand'>):
       : null;
 
   return { reviews, retailers, aggregate, allowedCount: allowed.length };
+}
+
+/**
+ * Average rating and count of the reviews a product page shows (any source, 1-5 stars); rating null and
+ * count 0 when it has none. The cards' stars and the product page's stars both come from here, so a card
+ * never claims a rating its page does not carry.
+ */
+export function reviewSummary(product: Pick<TopProduct, 'reviews' | 'brand'>): { rating: number | null; reviewCount: number } {
+  const rated = retailerReviews(product).reviews.filter((r) => r.rating >= 1 && r.rating <= 5);
+  return rated.length ? { rating: rated.reduce((n, r) => n + r.rating, 0) / rated.length, reviewCount: rated.length } : { rating: null, reviewCount: 0 };
 }
 
 /** "JB Hi-Fi", "JB Hi-Fi and Bunnings", "JB Hi-Fi, Bunnings and Myer". */

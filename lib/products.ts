@@ -1,4 +1,5 @@
 import { catalogue } from './catalogue';
+import { reviewSummary } from './review-sources';
 /**
  * Shared product library.
  *
@@ -36,6 +37,8 @@ export interface TopProductRetailer {
   logo?: string;
   /** True when `url` points at the retailer's product page, not a search. */
   deepLink?: boolean;
+  /** Daily price checks, oldest first (written by scripts/commerce, one point per Sydney day). */
+  history?: { d: string; p: number }[];
 }
 
 /**
@@ -110,6 +113,9 @@ export interface TopProduct {
   reviewSummaryIsAi?: boolean;
   customerImages?: string[];
   reviews?: ProductReview[];
+  /** Set by toListingCard (which strips `reviews`): average rating of the reviews the page shows, and their count. */
+  shownReviewRating?: number | null;
+  shownReviewCount?: number;
   reviewsUrl?: string;
   /** Genuine aggregate from the review catalogue; preferred over `rating`. */
   ratingReal?: number;
@@ -359,5 +365,6 @@ export function toListingCard(p: TopProduct): TopProduct {
     cmsDescriptionHtml: _cmsDescriptionHtml,
     ...card
   } = p;
-  return card;
+  const { rating, reviewCount } = reviewSummary(p);
+  return { ...card, shownReviewRating: rating, shownReviewCount: reviewCount };
 }

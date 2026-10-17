@@ -18,6 +18,16 @@ export function organisationJsonLd() {
         name: site.organisation.name,
         url: site.url,
         email: site.organisation.email,
+        legalName: site.organisation.operator,
+        taxID: `ABN ${site.organisation.abn}`,
+        address: {
+          '@type': 'PostalAddress',
+          postOfficeBoxNumber: site.organisation.mailingAddress.poBox.replace(/^PO Box\s*/i, ''),
+          addressLocality: site.organisation.mailingAddress.locality,
+          addressRegion: site.organisation.mailingAddress.region,
+          postalCode: site.organisation.mailingAddress.postcode,
+          addressCountry: site.organisation.mailingAddress.country,
+        },
         // Entity signals the audit found missing (GEO-3 / #24).
         logo: { '@type': 'ImageObject', url: `${site.url}/icon-512.png`, width: 512, height: 512 },
         description: site.metaDescription,

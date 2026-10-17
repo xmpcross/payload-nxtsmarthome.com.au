@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import AffiliateLink from './AffiliateLink';
 import RetailerLogo from './RetailerLogo';
+import StarRating from './StarRating';
+import { reviewSummary } from '@/lib/review-sources';
 import type { TopProduct } from '@/lib/products';
 import { responsiveImg } from '@/lib/image'
 
@@ -74,6 +76,11 @@ export default function ProductCard({ product, rank }: Props) {
             {product.brand ? `${product.brand} ` : ''}{product.name}
           </Link>
         </h3>
+        {(() => {
+          // toListingCard strips `reviews` and passes the summary; a full product is summarised here.
+          const s = product.shownReviewCount !== undefined ? { rating: product.shownReviewRating ?? null, reviewCount: product.shownReviewCount } : reviewSummary(product);
+          return <div className="mb-2.5"><StarRating rating={s.rating} count={s.reviewCount} /></div>;
+        })()}
 
         {/* Retailers list */}
         {topRetailers.length > 0 && (

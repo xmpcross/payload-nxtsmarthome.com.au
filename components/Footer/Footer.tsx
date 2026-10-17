@@ -241,8 +241,8 @@ const Footer = async () => {
 
       {/* Bottom bar */}
       <div className="container flex flex-col gap-3 py-8 text-xs text-neutral-500 sm:flex-row sm:items-center sm:justify-between dark:text-neutral-500">
-        <p>
-          © {year} {site.name}. Operated by {site.organisation.operator}.
+        <p className="text-[14px]">
+          © {year} {site.name}. Operated by {site.organisation.operator}, ABN {site.organisation.abn}.
         </p>
         <a href="#top" className="hover:text-primary-600 dark:hover:text-white">
           Back to top ↑
