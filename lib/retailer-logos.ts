@@ -9,7 +9,8 @@
  * rest are supplied brand assets. Woolworths is the logo from woolworths.com.au
  * (fetched 17 Oct 2026, trimmed, transparent background); Anker SOLIX is the header
  * wordmark from ankersolix.com (its SVG sprite symbol "ankersolix", 17 Oct 2026); Kmart is the header
- * logo (inline SVG) from kmart.com.au, 17 Oct 2026. Most marks are drawn for a light background,
+ * logo (inline SVG) from kmart.com.au, 17 Oct 2026; Appliances Online is the logo from
+ * appliancesonline.com.au, cropped to the icon and wordmark (without the "legendary service" tagline). Most marks are drawn for a light background,
  * so consumers put them on white, in dark mode too; `dark` marks (white
  * lettering) go on black instead.
  *
@@ -33,6 +34,8 @@ const RETAILER_LOGOS: Array<{ match: string; src: string; dark?: boolean }> = [
   { match: 'telstra', src: '/images/retailers/telstra.svg' },
   { match: 'woolworths', src: '/images/retailers/woolworths.png' },
   { match: 'kmart', src: '/images/retailers/kmart.svg' },
+  { match: 'appliances online', src: '/images/retailers/appliances-online.png' },
+  { match: 'appliancesonline', src: '/images/retailers/appliances-online.png' },
   { match: 'anker au', src: '/images/retailers/anker-solix.svg' },
   { match: 'anker solix', src: '/images/retailers/anker-solix.svg' },
   { match: 'ankersolix', src: '/images/retailers/anker-solix.svg' },
