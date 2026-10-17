@@ -12,6 +12,12 @@
 //   bash scripts/rewrite-descriptions.sh --limit 10      # preview 10
 //   bash scripts/rewrite-descriptions.sh --write         # rewrite all inactive products
 //   bash scripts/rewrite-descriptions.sh --slug <slug> --write
+//   bash scripts/rewrite-descriptions.sh --slug a,b,c --research --write
+//
+// --research: a product with too little stored data (the ones otherwise
+// skipped) is researched on the web first (OpenRouter web search, manufacturer
+// pages preferred, ~US$0.06 each) and written from those facts only; the
+// pages used are recorded in descriptionRewrite.sources.
 //
 // Rules follow scripts/write-product-blurbs.mjs (5 Oct 2026): only stated
 // facts, claims attributed to the brand, no prices, ratings, test claims or
@@ -23,6 +29,7 @@ import { getPayload } from 'payload';
 import config from '../../payload.config';
 // Plain ESM module shared with the article writer.
 import { parseAiJson } from '../writer/parse-ai-json.mjs';
+import { researchWithOpenRouter } from '../writer/content-rules.mjs';
 
 type Json = Record<string, any>;
 const argv = process.argv.slice(2);
@@ -35,6 +42,7 @@ const WRITE = flag('write');
 const LIMIT = Number(opt('limit', WRITE ? '100000' : '3'));
 const ONLY = opt('slug');
 const INCLUDE_DONE = flag('redo');
+const RESEARCH = flag('research');
 const { OPENROUTER_API_KEY } = process.env;
 const MODEL = process.env.OPENROUTER_REWRITE_MODEL || process.env.OPENROUTER_MODEL || 'anthropic/claude-sonnet-4.5';
 if (!OPENROUTER_API_KEY) {
@@ -83,8 +91,27 @@ function problems(out: Json): string[] {
 }
 
 let spent = 0;
-async function rewrite(p: Json): Promise<Json> {
-  const { text, specs } = sourceOf(p);
+async function research(p: Json) {
+  const name = `${p.brand && !String(p.name).startsWith(p.brand) ? `${p.brand} ` : ''}${p.name}`;
+  const r = await researchWithOpenRouter({
+    apiKey: OPENROUTER_API_KEY,
+    model: MODEL,
+    maxResults: 6,
+    log: () => {},
+    // Perplexity: Exa searched on the whole instruction text and returned unrelated
+    // pages; 'native' returned no citations (tested 17 Oct 2026).
+    engine: 'perplexity',
+    prompt: `${name} specifications and features (manufacturer product page). Report only what the pages state; no prices, ratings or reviews.`,
+  });
+  spent += Number(r.usage?.cost || 0);
+  const facts = (r.json.facts as Json[]).filter((f) => f.url && !/\$\s?\d|\brating|\breview/i.test(f.fact));
+  return { text: facts.map((f) => `- ${f.fact}`).join('\n'), urls: [...new Set(facts.map((f) => String(f.url)))] };
+}
+
+async function rewrite(p: Json, researched?: { text: string }): Promise<Json> {
+  const stored = sourceOf(p);
+  const { specs } = stored;
+  const text = researched ? `Facts from the manufacturer and specification pages:\n${researched.text}${stored.text ? `\n\n${stored.text}` : ''}` : stored.text;
   const user = `Product: ${p.brand ? `${p.brand} ` : ''}${p.name}\nCategory: ${p.categoryName || ''}${p.subCategory ? ` / ${p.subCategory}` : ''}\n\nProduct text:\n${text || '(none)'}\n\nSpecifications:\n${specs.join('\n') || '(none)'}`;
   for (let attempt = 1; attempt <= 3; attempt++) {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -105,7 +132,7 @@ async function rewrite(p: Json): Promise<Json> {
 }
 
 const payload = await getPayload({ config });
-const where: Json = ONLY ? { slug: { equals: ONLY } } : { active: { equals: false } };
+const where: Json = ONLY ? { slug: { in: ONLY.split(',') } } : { active: { equals: false } };
 const docs = ((await payload.find({ collection: 'products', where, limit: 5000, depth: 0, overrideAccess: true })).docs as Json[])
   .filter((p) => ONLY || INCLUDE_DONE || !(p.descriptionRewrite?.approach || '').includes('rewrite-descriptions'));
 const runDir = path.resolve(process.cwd(), 'scratch/description-rewrites', new Date().toISOString().replace(/[:.]/g, '-'));
@@ -117,13 +144,23 @@ console.log(`${docs.length} product(s) to consider · model ${MODEL} · ${WRITE 
 for (const p of docs) {
   if (done + failed >= LIMIT) break;
   const { text, specs } = sourceOf(p);
-  if (words(text) < 25 && specs.length < 4) {
+  let researched: { text: string; urls: string[] } | undefined;
+  if (words(text) < 25 && specs.length < 4 && RESEARCH) {
+    try {
+      researched = await research(p);
+    } catch (err: any) {
+      console.log(`  research failed for ${p.slug}: ${err.message}`);
+    }
+    if (researched && researched.urls.length < 1) researched = undefined;
+  }
+  if (words(text) < 25 && specs.length < 4 && !researched) {
     skipped++;
     report.push({ slug: p.slug, skipped: 'not enough source data (no description and fewer than 4 specs)' });
     continue;
   }
   try {
-    const out = await rewrite(p);
+    const out = await rewrite(p, researched);
+    if (researched) out.sources = researched.urls;
     done++;
     report.push({ slug: p.slug, name: p.name, ...out });
     if (!WRITE) {
@@ -140,8 +177,10 @@ for (const p of docs) {
         descriptionRewrite: {
           date: new Date().toISOString().slice(0, 10),
           model: MODEL,
-          sources: ['product description', 'About this item', 'catalogue specifications'],
-          approach: 'rewrite-descriptions.ts: written only from the stored description and specifications, claims attributed to the brand, rule-checked; no fact check pass',
+          sources: researched ? researched.urls : ['product description', 'About this item', 'catalogue specifications'],
+          approach: researched
+            ? 'rewrite-descriptions.ts --research: written only from facts on the manufacturer/specification pages listed in sources (OpenRouter web search), claims attributed to the brand, rule-checked; no fact check pass'
+            : 'rewrite-descriptions.ts: written only from the stored description and specifications, claims attributed to the brand, rule-checked; no fact check pass',
           ...(p.shortDescription ? { previousShortDescription: p.shortDescription } : {}),
           ...(p.bestFor ? { previousBestFor: p.bestFor } : {}),
           ...(p.descriptionRewrite ? { previous: p.descriptionRewrite } : {}),
