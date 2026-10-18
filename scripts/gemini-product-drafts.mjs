@@ -188,6 +188,8 @@ async function sourceUrls(json) {
       real = r.headers.get('location') || uri;
     } catch {}
     if (/vertexaisearch|grounding-api-redirect/.test(real)) continue;
+    // Forums, video, social, manual mirrors and US retailers are not product sources (content audit C6).
+    if (/^https?:\/\/(?:[^/]*\.)?(?:reddit\.com|youtube\.com|youtu\.be|facebook\.com|manuals\.plus|device\.report|notice-facile\.com|manualslib\.com|bestbuy\.com|bhphotovideo\.com|crutchfield\.com|walmart\.com|homedepot\.com)(?:[/:?#]|$)|^https?:\/\/(?:www\.)?amazon\.com(?:[/:?#]|$)|^https?:\/\/community\./i.test(real)) continue;
     if (!urls.includes(real)) urls.push(real);
   }
   return urls;

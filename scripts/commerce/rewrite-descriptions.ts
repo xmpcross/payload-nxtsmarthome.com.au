@@ -53,7 +53,7 @@ if (!OPENROUTER_API_KEY) {
 const SYSTEM = `You write product descriptions for an independent Australian smart-home site. The site researches products; it does not test them.
 Rules, all strict:
 - Use ONLY facts stated in the product text and specifications you are given. Add nothing else: no prices, no ratings or review scores, no test or hands-on claims ("we tested", "in our testing"), no comparisons with other products, no availability or delivery claims.
-- Attribute capability and performance claims to the brand ("the brand says", "according to the manufacturer", "it is listed with"). Do not state them as verified fact.
+- The page already says, once, that features and specifications are as the brand describes them, so state routine features plainly: no "per the brand" or "the brand says" in front of each one. Attribute only performance, savings and comparative claims (battery life, "up to 40%", "faster", "quieter"), once each: "the brand says it can cut cooling costs by up to 40%". Do not state those as verified fact.
 - Use a specification only where it does not contradict the product text. If the two disagree, leave the point out.
 - Write original sentences; do not copy the source text or its marketing slogans. No ALL CAPS, no hype, no superlatives, no exclamation marks.
 - Australian English (colour, optimise, centre, metres). Mention 230V, plug type, local app regions or Australian standards ONLY if the data states them.
@@ -63,6 +63,13 @@ Return JSON with exactly these keys:
 - "descriptionHtml": an <h3>Overview</h3> with 2 short paragraphs (what it is, who it is for, how it is set up or used), then <h3>Key features</h3> with a <ul> of 4 to 6 <li> items, each starting with a short <strong>label</strong> followed by the detail. 170 to 260 words in total.
 - "shortDescription": 55 to 75 words, one paragraph, plain text. The first sentence names the product and says what it is.
 - "bestFor": one line, at most 16 words, who it suits, derived only from the stated features. No full stop.`;
+
+// The page states the attribution once (ATTRIBUTION); repeated hedges read as boilerplate (content audit C6).
+const HEDGE = /\b(?:per the brand|the brand says|according to the brand|the brand states|per the manufacturer|according to the manufacturer)\b/gi;
+const HEDGES_MAX = 2;
+const ATTRIBUTION = '<p><em>Features and specifications in this description are as the brand describes them.</em></p>\n';
+// Forums, video, social, manual mirrors and US retailers are not product sources for an Australian page.
+const WEAK_SOURCE = /^https?:\/\/(?:[^/]*\.)?(?:reddit\.com|youtube\.com|youtu\.be|facebook\.com|manuals\.plus|device\.report|notice-facile\.com|manualslib\.com|bestbuy\.com|bhphotovideo\.com|crutchfield\.com|walmart\.com|homedepot\.com)(?:[/:?#]|$)|^https?:\/\/(?:www\.)?amazon\.com(?:[/:?#]|$)|^https?:\/\/community\./i;
 
 const BANNED = [/\$\s?\d/, /\bwe (tested|tried|found)\b/i, /\bin our (test|testing|experience)\b/i, /\b\d(\.\d)?\s*(out of 5|\/\s?5|stars?)\b/i, /\b(customer|user|star|review) (rating|score)s?\b/i, /\bbest\b/i, /!/, /\b(color|optimize|center|meters)\b/i];
 
@@ -81,6 +88,8 @@ function problems(out: Json): string[] {
   const issues: string[] = [];
   const all = `${out.descriptionHtml} ${out.shortDescription} ${out.bestFor}`;
   for (const re of BANNED) if (re.test(all.replace(/<[^>]+>/g, ' '))) issues.push(`matches ${re}`);
+  const hedges = String(out.descriptionHtml).match(HEDGE)?.length ?? 0;
+  if (hedges > HEDGES_MAX) issues.push(`${hedges} "per the brand"-style hedges (max ${HEDGES_MAX}; the page states the attribution once)`);
   const dw = words(out.descriptionHtml), sw = words(out.shortDescription), bw = words(out.bestFor);
   if (dw < 140 || dw > 320) issues.push(`description ${dw} words`);
   if (sw < 45 || sw > 90) issues.push(`short description ${sw} words`);
@@ -104,7 +113,7 @@ async function research(p: Json) {
     prompt: `${name} specifications and features (manufacturer product page). Report only what the pages state; no prices, ratings or reviews.`,
   });
   spent += Number(r.usage?.cost || 0);
-  const facts = (r.json.facts as Json[]).filter((f) => f.url && !/\$\s?\d|\brating|\breview/i.test(f.fact));
+  const facts = (r.json.facts as Json[]).filter((f) => f.url && !WEAK_SOURCE.test(String(f.url)) && !/\$\s?\d|\brating|\breview/i.test(f.fact));
   return { text: facts.map((f) => `- ${f.fact}`).join('\n'), urls: [...new Set(facts.map((f) => String(f.url)))] };
 }
 
@@ -171,7 +180,7 @@ for (const p of docs) {
       collection: 'products',
       id: p.id,
       data: {
-        cmsDescriptionHtml: out.descriptionHtml,
+        cmsDescriptionHtml: ATTRIBUTION + out.descriptionHtml,
         shortDescription: out.shortDescription,
         bestFor: out.bestFor,
         descriptionRewrite: {

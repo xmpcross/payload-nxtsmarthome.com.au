@@ -141,6 +141,7 @@ const argv = yargs(hideBin(process.argv))
   .option('research',     { type: 'boolean', default: true, describe: 'Research topic with web search before writing' })
   .option('limit',        { type: 'number', describe: 'Max articles to generate (useful with --topics to run a subset)' })
   .option('allow-duplicate', { type: 'boolean', default: false, describe: 'Write even when a near-duplicate article already exists' })
+  .option('allow-burst', { type: 'boolean', default: false, describe: 'Publish now even if another article went out in the last 24h (see RELEASE_GAP_HOURS)' })
   .option('dry-run',      { type: 'boolean', default: false, describe: 'Generate and print JSON; do not save to the database' })
   .option('author',       { alias: 'a', type: 'string', default: DEFAULT_AUTHOR_SLUG, describe: 'Byline: slug of the author who edits and fact-checks these drafts' })
   .help()
@@ -202,6 +203,23 @@ async function db() {
 
 let releaseBase: Date | null = null;
 let releaseIndex = 0;
+
+/*
+ * Release cadence (content audit C6, 18 Oct 2026): articles stamped minutes apart read as
+ * scaled content. An immediate --publish therefore starts no sooner than this many hours
+ * after the newest release already on the site, published or scheduled.
+ */
+const RELEASE_GAP_HOURS = 24;
+
+async function latestRelease(): Promise<Date | null> {
+  const payload = await db();
+  const { docs } = await payload.find({
+    collection: 'posts', where: { _status: { equals: 'published' } }, limit: 0, pagination: false, depth: 0, overrideAccess: true,
+    select: { showFrom: true, publishDate: true, publishedAt: true },
+  });
+  const times = (docs as any[]).map((d) => Date.parse(d.showFrom ?? d.publishDate ?? d.publishedAt ?? '')).filter(Number.isFinite);
+  return times.length ? new Date(Math.max(...times)) : null;
+}
 
 function resolveRelease() {
   if (!argv.publishedAt) {
@@ -1088,6 +1106,18 @@ async function run() {
       if (match) console.log(`Skipped "${job.topic}": too close to existing "${match}" (--allow-duplicate to override)`);
       return !match;
     });
+  }
+
+  // Keep the release cadence: schedule after the newest release rather than publishing on top of it.
+  if (argv.publish && !releaseBase && !argv['dry-run'] && !argv['allow-burst'] && jobs.length) {
+    const last = await latestRelease();
+    const next = last ? new Date(last.getTime() + RELEASE_GAP_HOURS * 3_600_000) : null;
+    if (next && next > new Date()) {
+      releaseBase = next;
+      argv['publish-every'] = argv['publish-every'] ?? RELEASE_GAP_HOURS;
+      const when = next.toLocaleString('en-AU', { timeZone: 'Australia/Perth', dateStyle: 'medium', timeStyle: 'short' });
+      console.log(`Release: the newest article went out less than ${RELEASE_GAP_HOURS}h ago, so ${jobs.length > 1 ? 'this batch is' : 'this article is'} scheduled from ${when} Perth${jobs.length > 1 ? `, ${argv['publish-every']}h apart` : ''} (--allow-burst to publish now)\n`);
+    }
   }
 
   // Stagger batch releases
