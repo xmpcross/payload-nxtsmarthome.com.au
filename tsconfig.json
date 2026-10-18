@@ -46,6 +46,7 @@
   "exclude": [
     "node_modules",
     "migration",
-    "scripts/writer"
+    "scripts/writer",
+    "scratch"
   ]
 }
