@@ -228,10 +228,12 @@ export default async function ProductDetailPage({
                 <h1 className="product-title mb-1.5 font-bold leading-tight text-[#1d252c] dark:text-white">
                   {brandedName(product)}
                 </h1>
-                {/* Stars only when the product has reviews, counted from the reviews block below. */}
+                {/* Stars only when the reviews block below shows a score, labelled as retailer
+                    customers' so they are not read as a rating from this site (rule 5). */}
                 {summary.reviewCount > 0 ? (
-                  <div className="mb-2.5">
+                  <div className="mb-2.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <StarRating rating={summary.rating} count={summary.reviewCount} />
+                    <span className="text-[12px] text-neutral-600 dark:text-neutral-400">Australian retailer customer rating</span>
                   </div>
                 ) : (
                   <div className="mb-1" />
@@ -350,6 +352,13 @@ export default async function ProductDetailPage({
           {/* ---------- Right column: purchase panel ---------- */}
           <aside className="lg:sticky lg:top-20">
             <div className="rounded-[8px] border border-[#e0e0e0] bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+              {/* With no retailer there are no prices or affiliate links, so no price note and no disclosure. */}
+              {!retailers.length ? (
+                <p className="text-sm text-[#55555a] dark:text-slate-300">
+                  No Australian retailer we track lists this product at the moment.
+                </p>
+              ) : (
+              <>
               {cheapest ? (
                 <>
                   <p className="text-xs font-semibold uppercase tracking-wider text-[#55555a] dark:text-slate-400">
@@ -399,12 +408,14 @@ export default async function ProductDetailPage({
                   {cheapest ? `Buy at ${ctaRetailer.name}` : `Check price at ${ctaRetailer.name}`}
                 </AffiliateLink>
               ) : null}
+              </>
+              )}
             </div>
           </aside>
         </div>
 
         {/* Price history: lowest recorded price per day, above the retailer table */}
-        <PriceHistory productName={brandedName(product)} retailers={product.retailers} />
+        {retailers.length ? <PriceHistory productName={brandedName(product)} retailers={retailers} /> : null}
 
         {/* Retailer Price Comparison Table */}
         <RetailerPriceTable

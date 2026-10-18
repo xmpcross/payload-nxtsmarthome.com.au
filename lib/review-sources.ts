@@ -28,6 +28,12 @@
  * Australian ones. The aggregate score still needs MIN_AGGREGATE_REVIEWS reviews, and none of this
  * reaches structured data (lib/seo.ts emits no aggregateRating and no Review).
  *
+ * CHANGED 18 Oct 2026 (content audit C4): overseas reviews are still shown, but the score, the
+ * histogram, the "4 stars or higher" share and the stars on product cards count only Australian
+ * sources (`counted`): the named Australian retailers and the brand's Australian site. An overseas
+ * review, or one from the brand's global store, often describes another variant, plug or warranty,
+ * so it should not move the number an Australian reader sees.
+ *
  * No fs here: ProductReviews is a client component and imports this.
  */
 import type { ProductReview, TopProduct } from './products';
@@ -111,10 +117,12 @@ export function reviewSource(review: ProductReview, brand?: string): ReviewSourc
 
 export interface RetailerReviews {
   /** Empty when fewer than MIN_VISIBLE_REVIEWS are allowed: the block is hidden. */
-  reviews: (ProductReview & { retailer: string })[];
+  reviews: (ProductReview & { retailer: string; overseas: boolean; australian: boolean })[];
+  /** The rated reviews the score and histogram count: Australian retailers and the brand's AU site. */
+  counted: (ProductReview & { retailer: string; overseas: boolean; australian: boolean })[];
   /** Distinct sources, most reviews first. */
   retailers: string[];
-  /** Counted from `reviews`; null below MIN_AGGREGATE_REVIEWS. */
+  /** Counted from `counted`; null below MIN_AGGREGATE_REVIEWS. */
   aggregate: { rating: number; count: number } | null;
   /** Allowed reviews before the visibility threshold, for reporting. */
   allowedCount: number;
@@ -123,7 +131,7 @@ export interface RetailerReviews {
 export function retailerReviews(product: Pick<TopProduct, 'reviews' | 'brand'>): RetailerReviews {
   // Australian and brand-store sources first, then the rest; the order within each group is kept.
   const allowed = (product.reviews ?? [])
-    .map((r) => { const source = reviewSource(r, product.brand); return { ...r, retailer: source.retailer, overseas: Boolean(source.overseas) }; })
+    .map((r) => { const source = reviewSource(r, product.brand); return { ...r, retailer: source.retailer, overseas: Boolean(source.overseas), australian: !source.global }; })
     .sort((a, b) => Number(a.overseas) - Number(b.overseas));
   const reviews = allowed.length >= MIN_VISIBLE_REVIEWS ? allowed : [];
 
@@ -132,23 +140,23 @@ export function retailerReviews(product: Pick<TopProduct, 'reviews' | 'brand'>):
   const overseasNames = new Set(allowed.filter((r) => r.overseas).map((r) => r.retailer));
   const retailers = [...byRetailer.entries()].sort((a, b) => Number(overseasNames.has(a[0])) - Number(overseasNames.has(b[0])) || b[1] - a[1]).map(([name]) => name);
 
-  const rated = reviews.filter((r) => r.rating >= 1 && r.rating <= 5);
+  const counted = reviews.filter((r) => r.australian && r.rating >= 1 && r.rating <= 5);
   const aggregate =
-    rated.length >= MIN_AGGREGATE_REVIEWS
-      ? { rating: rated.reduce((sum, r) => sum + r.rating, 0) / rated.length, count: rated.length }
+    counted.length >= MIN_AGGREGATE_REVIEWS
+      ? { rating: counted.reduce((sum, r) => sum + r.rating, 0) / counted.length, count: counted.length }
       : null;
 
-  return { reviews, retailers, aggregate, allowedCount: allowed.length };
+  return { reviews, counted, retailers, aggregate, allowedCount: allowed.length };
 }
 
 /**
- * Average rating and count of the reviews a product page shows (any source, 1-5 stars); rating null and
- * count 0 when it has none. The cards' stars and the product page's stars both come from here, so a card
- * never claims a rating its page does not carry.
+ * The aggregate the reviews block shows (Australian sources only, at least
+ * MIN_AGGREGATE_REVIEWS); rating null and count 0 otherwise. The cards' stars and the product page's
+ * stars both come from here, so a card never claims a rating its page does not carry.
  */
 export function reviewSummary(product: Pick<TopProduct, 'reviews' | 'brand'>): { rating: number | null; reviewCount: number } {
-  const rated = retailerReviews(product).reviews.filter((r) => r.rating >= 1 && r.rating <= 5);
-  return rated.length ? { rating: rated.reduce((n, r) => n + r.rating, 0) / rated.length, reviewCount: rated.length } : { rating: null, reviewCount: 0 };
+  const { aggregate } = retailerReviews(product);
+  return aggregate ? { rating: aggregate.rating, reviewCount: aggregate.count } : { rating: null, reviewCount: 0 };
 }
 
 /** "JB Hi-Fi", "JB Hi-Fi and Bunnings", "JB Hi-Fi, Bunnings and Myer". */

@@ -92,17 +92,17 @@ function ReviewCard({ review, inRow }: { review: ProductReview & { retailer: str
 
 export default function ProductReviews({ product }: { product: TopProduct }) {
   const [showAll, setShowAll] = useState(false);
-  const { reviews, retailers, aggregate } = useMemo(
+  const { reviews, counted, retailers, aggregate } = useMemo(
     () => retailerReviews(product),
     [product],
   );
 
-  // Counted from the imported reviews themselves, so the bars always add up to
-  // the reviews actually shown on the page.
+  // Counted from the same reviews as the score (Australian sources only), so
+  // the bars always add up to the review count beside them.
   const stats = useMemo(() => {
     const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     let rated = 0;
-    for (const r of reviews) {
+    for (const r of counted) {
       const star = Math.round(r.rating);
       if (star >= 1 && star <= 5) {
         counts[star] += 1;
@@ -115,7 +115,7 @@ export default function ProductReviews({ product }: { product: TopProduct }) {
       rated,
       positivePct: rated ? Math.round((positive / rated) * 100) : null,
     };
-  }, [reviews]);
+  }, [counted]);
 
   if (!reviews.length) return null;
 
@@ -158,7 +158,7 @@ export default function ProductReviews({ product }: { product: TopProduct }) {
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-[#55555a] dark:text-slate-400">
-                  {reviewCount?.toLocaleString('en-AU')} review{reviewCount === 1 ? '' : 's'}
+                  {reviewCount?.toLocaleString('en-AU')} Australian review{reviewCount === 1 ? '' : 's'}
                 </p>
               </div>
 
@@ -186,7 +186,7 @@ export default function ProductReviews({ product }: { product: TopProduct }) {
                 customer review{reviews.length === 1 ? '' : 's'} from {from}
               </p>
               <p className="mt-3 text-xs text-[#8a8a8f] dark:text-slate-500">
-                No overall score is shown under {MIN_AGGREGATE_REVIEWS} reviews.
+                No overall score is shown under {MIN_AGGREGATE_REVIEWS} reviews from Australian sources.
               </p>
             </div>
           )}
@@ -209,6 +209,11 @@ export default function ProductReviews({ product }: { product: TopProduct }) {
             reviewers bought the product. They come from retailers in Australia and overseas, and
             each review says where it was posted; Australian sources are listed first and overseas
             ones may not reflect Australian stock, pricing or warranty.
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-[#1d252c] dark:text-slate-300">
+            The score and the star bars count only reviews from Australian retailers and the
+            brand&apos;s Australian site. Overseas reviews, including the brand&apos;s global store, are
+            shown but not counted.
           </p>
           <p className="mt-2 text-[0.6875rem] text-[#55555a] dark:text-slate-400">
             Reviews may relate to a different variant, bundle or colour. Check the retailer&apos;s page

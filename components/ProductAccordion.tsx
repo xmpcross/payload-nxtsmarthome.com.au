@@ -308,6 +308,8 @@ export default function ProductAccordion({
             {updated ? <InfoRow label="Last Updated" value={updated} /> : null}
           </dl>
 
+          {/* No retailer, no prices and no affiliate links on the page: nothing to disclose. */}
+          {retailerNames.length ? (
           <p className="mt-4 text-xs text-[#55555a] dark:text-slate-400">
             Prices are indicative and in Australian dollars — confirm on the retailer&apos;s site.
             {AFFILIATE_ENABLED && (
@@ -320,6 +322,7 @@ export default function ProductAccordion({
               </>
             )}
           </p>
+          ) : null}
         </>
       ),
     },
