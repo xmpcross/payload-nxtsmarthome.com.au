@@ -2,6 +2,28 @@
 
 Health score **68/100**. Fix items in this order. Effort estimates are rough.
 
+## Progress, 18 Oct 2026 (content items only)
+
+Done on 18 Oct; details in `findings/content-2026-10-18.md`. Technical and performance items have not been re-checked and are not marked.
+
+- **C1** done. The random byline was already removed from the writer. Adrian Thompson and Harry Cheng were not real contributors: their 9 posts now carry Kritin Curtis's byline, their author records and pages are deleted, and their URLs 301 to `/authors/kritin-curtis/`.
+- **H5** done. 67 legal, safety and tenancy articles now have a `## Sources` section with verified official links. The 4 articles that were not legal topics got hand-picked manufacturer and eSafety sources instead. The writer's legal-source check now flags only one article, a false positive.
+- **Medium, content** done:
+  - The smart-plug and lighting-scene duplicates were already 301-merged; the 10 merged copies are now unpublished.
+  - Hub "Related guides" sections link the smart-plug, automation and lighting-scene clusters.
+  - Over-promising titles were rewritten.
+  - The non-AU Aqara H1 EU switch was removed from both articles and switched off (its URL 301s to lighting), and the Nest Thermostat's offers were switched off.
+  - The kettle line was fixed.
+- **Medium, disclosure page** done. The score and rank wording is gone, the page is dated, and Geniuslink is listed. The commission notice sits above the offers on product pages.
+- **Low, cadence** done. Publishing now waits at least 24h after the newest release (`--allow-burst` to override). `dateModified` was bumped only on the 10 factually corrected articles.
+- **Also done:**
+  - Retailer star scores now count Australian reviews only, with a minimum of 20, and are labelled.
+  - The ABN and PO box are on `/about/`, `/contact/`, `/terms/` and `/privacy/`.
+  - Each AI-drafted article carries a one-line AI note (needs a deploy).
+  - Sentences were shortened across the archive.
+  - Product-page hedging and weak sources were cleaned up.
+- **Open (content):** label AI imagery, and author `sameAs` and credentials (real profiles needed).
+
 ## Critical (this week)
 | # | Action | Where | Effort |
 |---|---|---|---|

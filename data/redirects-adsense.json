@@ -73,5 +73,10 @@
     "from": "/authors/harry-cheng/",
     "to": "/authors/kritin-curtis/",
     "reason": "Harry Cheng was not a real contributor; profile removed and articles re-bylined to Kritin Curtis (content audit C1, 18 Oct 2026)"
+  },
+  {
+    "from": "/products/aqara-smart-light-switch-h1-eu-no-neutral/",
+    "to": "/products/category/lighting/",
+    "reason": "European-format switch (square EU backbox) switched off: the site places no EU/US-format products (content audit C3, 18 Oct 2026)"
   }
 ]
