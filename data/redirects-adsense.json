@@ -63,5 +63,15 @@
     "from": "/authors/k-curtis/",
     "to": "/authors/kritin-curtis/",
     "reason": "Same person under two slugs; Strapi's \"K Curtis\" is aliased to kritin-curtis in lib/authors.ts (AdSense Task 9, 24 Sep 2026)"
+  },
+  {
+    "from": "/authors/adrian-thompson/",
+    "to": "/authors/kritin-curtis/",
+    "reason": "Adrian Thompson was not a real contributor; profile removed and articles re-bylined to Kritin Curtis (content audit C1, 18 Oct 2026)"
+  },
+  {
+    "from": "/authors/harry-cheng/",
+    "to": "/authors/kritin-curtis/",
+    "reason": "Harry Cheng was not a real contributor; profile removed and articles re-bylined to Kritin Curtis (content audit C1, 18 Oct 2026)"
   }
 ]

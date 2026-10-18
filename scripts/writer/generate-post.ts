@@ -14,7 +14,7 @@
 //   bash run.sh "Best smart locks for renters" --category security --post-type buying-guide
 //   bash run.sh --category lighting --count 5 --publishedAt "2026-11-01 09:00" --publish-every 24
 //   bash run.sh --dry-run --category energy --count 1 --no-images
-//   bash run.sh "Smart lock laws for renters" --category security --author adrian-thompson
+//   bash run.sh "Smart lock laws for renters" --category security --author kritin-curtis
 //
 // Byline: --author <slug> names the person who edits and fact-checks the
 // draft. Default: the site editor, Kritin Curtis. Never chosen at random.
