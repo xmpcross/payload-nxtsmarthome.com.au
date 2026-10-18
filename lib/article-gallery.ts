@@ -1,6 +1,6 @@
 import { responsiveImg } from './image';
 
-type GalleryImage = { src: string; alt?: string; width?: number; height?: number };
+type GalleryImage = { src: string; alt?: string; caption?: string; width?: number; height?: number };
 
 const escapeAttr = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -25,7 +25,10 @@ export function withGallery(html: string, images: GalleryImage[] | undefined, ti
     return (
       `<figure class="article-gallery-figure"><img src="${escapeAttr(attrs.src)}"` +
       (attrs.srcSet ? ` srcset="${escapeAttr(attrs.srcSet)}" sizes="${escapeAttr(attrs.sizes || '')}"` : '') +
-      ` alt="${alt}"${size} loading="lazy" decoding="async"></figure>\n`
+      ` alt="${alt}"${size} loading="lazy" decoding="async">` +
+      // The media caption labels generated images ("AI-generated illustration").
+      (img.caption ? `<figcaption class="mt-2 text-xs text-neutral-500 dark:text-neutral-400">${escapeAttr(img.caption)}</figcaption>` : '') +
+      `</figure>\n`
     );
   };
 

@@ -46,11 +46,11 @@ export interface StrapiPost {
   /** 'ai' for posts drafted by the article writer (scripts/writer), 'manual' otherwise. */
   source?: string;
   keyTakeaways?: string;
-  coverImage?: { url?: string; alternativeText?: string } | null;
+  coverImage?: { url?: string; alternativeText?: string; caption?: string } | null;
   coverImageUrl?: string;
   coverImageAlt?: string;
   /** Extra images generated with the article (Payload upload, hasMany). */
-  gallery?: Array<{ url?: string; alt?: string; alternativeText?: string; width?: number; height?: number } | number> | null;
+  gallery?: Array<{ url?: string; alt?: string; alternativeText?: string; caption?: string; width?: number; height?: number } | number> | null;
   tags?: string[];
   featured?: boolean;
   readingTimeMinutes?: number;

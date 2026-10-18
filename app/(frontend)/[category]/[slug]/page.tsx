@@ -224,7 +224,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
             </div>
           </div>
 
-          <div className="relative mt-8 sm:mt-12">
+          <figure className="relative mt-8 sm:mt-12">
             <img
               {...responsiveImg(coverFor(article), 1200, '(max-width: 768px) 100vw, 736px')}
               alt={article.imageAlt || article.title}
@@ -233,7 +233,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
               fetchPriority="high"
               className="aspect-16/9 w-full rounded-2xl object-cover object-center md:aspect-auto md:h-[650px]"
             />
-          </div>
+            {/* The media caption labels generated images ("AI-generated illustration"). */}
+            {article.imageCaption ? (
+              <figcaption className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">{article.imageCaption}</figcaption>
+            ) : null}
+          </figure>
         </header>
 
         <div className="container mt-12 flex flex-col lg:flex-row">

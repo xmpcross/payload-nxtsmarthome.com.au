@@ -69,8 +69,10 @@ export interface ArticleFrontmatter {
   draft?: boolean;
   image?: string;
   imageAlt?: string;
+  /** The cover's media caption, e.g. "AI-generated illustration"; shown under the cover. */
+  imageCaption?: string;
   /** Gallery images saved with the post, shown inside the article body. */
-  gallery?: { src: string; alt?: string; width?: number; height?: number }[];
+  gallery?: { src: string; alt?: string; caption?: string; width?: number; height?: number }[];
   /** Short takeaway rendered in a callout at the top of the article. */
   keyTakeaway?: string;
   products?: ProductRef[];
@@ -304,10 +306,11 @@ async function fromStrapi(post: StrapiPost): Promise<Article | null> {
      */
     image: mediaUrl(post.coverImage?.url) || post.coverImageUrl || undefined,
     imageAlt: post.coverImageAlt || post.coverImage?.alternativeText || undefined,
+    imageCaption: post.coverImage?.caption || undefined,
     // Unpopulated (id-only) or file-less entries are skipped.
     gallery: (post.gallery ?? [])
       .filter((m): m is Exclude<typeof m, number> => Boolean(m && typeof m === 'object' && m.url))
-      .map((m) => ({ src: mediaUrl(m.url), alt: m.alt || m.alternativeText || undefined, width: m.width, height: m.height })),
+      .map((m) => ({ src: mediaUrl(m.url), alt: m.alt || m.alternativeText || undefined, caption: m.caption || undefined, width: m.width, height: m.height })),
     keyTakeaway: post.keyTakeaways || undefined,
     faq: (post.faq ?? [])
       .map((f) => ({ q: f.q ?? f.question ?? '', a: f.a ?? f.answer ?? '' }))
