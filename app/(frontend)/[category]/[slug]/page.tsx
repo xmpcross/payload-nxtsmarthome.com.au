@@ -240,6 +240,17 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
           <article className="w-full min-w-0 lg:w-3/5 xl:w-2/3 xl:pe-20">
             <Disclosure />
 
+            {/* Per-article AI disclosure, matching the AI-assisted drafting note on /about/ (content audit C10). */}
+            {article.aiDrafted ? (
+              <p className="mb-6 text-[14px] leading-[22px] text-slate-500 dark:text-slate-400">
+                Drafted with AI writing tools, then edited and fact-checked by {resolveAuthor(article.author).name}.{' '}
+                <Link href="/how-we-test/" className="underline hover:text-brand-600">
+                  How we research
+                </Link>
+                .
+              </p>
+            ) : null}
+
             {article.keyTakeaway && (
               <div className="mb-8 rounded-2xl bg-primary-50 p-6 dark:bg-neutral-800">
                 <p className="text-sm font-semibold tracking-wide text-primary-700 uppercase dark:text-primary-400">

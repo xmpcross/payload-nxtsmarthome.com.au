@@ -75,6 +75,8 @@ export interface ArticleFrontmatter {
   keyTakeaway?: string;
   products?: ProductRef[];
   faq?: FaqItem[];
+  /** Drafted with the AI article writer; the article page says so above the body (content audit C10). */
+  aiDrafted?: boolean;
 }
 
 export interface Article extends ArticleFrontmatter {
@@ -284,6 +286,7 @@ async function fromStrapi(post: StrapiPost): Promise<Article | null> {
     // A scheduled post dates from its release (showFrom), not from when it was written.
     date: post.showFrom ?? post.publishDate ?? post.publishedAt ?? '',
     updated: post.dateModified || undefined,
+    aiDrafted: post.source === 'ai',
     /*
      * The CMS author when the post has one, by slug so resolveAuthor matches a
      * file in content/authors/ and the byline links to a real profile. Posts

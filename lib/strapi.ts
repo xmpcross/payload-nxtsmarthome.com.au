@@ -43,6 +43,8 @@ export interface StrapiPost {
   /** Release date: a future value keeps the post hidden until then (see publishedCutoff). */
   showFrom?: string | null;
   dateModified?: string;
+  /** 'ai' for posts drafted by the article writer (scripts/writer), 'manual' otherwise. */
+  source?: string;
   keyTakeaways?: string;
   coverImage?: { url?: string; alternativeText?: string } | null;
   coverImageUrl?: string;
