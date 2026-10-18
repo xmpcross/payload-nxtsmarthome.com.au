@@ -67,6 +67,11 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
           url: `${site.url}/authors/${author.slug}/`,
           ...(author.bio ? { description: author.bio } : {}),
           ...(author.role ? { jobTitle: author.role } : {}),
+          // Off-site profiles (LinkedIn etc.) corroborate the byline; on-site links are not sameAs.
+          ...(() => {
+            const sameAs = (author.links ?? []).map((l) => l.href).filter((h) => /^https?:\/\//.test(h) && !h.startsWith(site.url));
+            return sameAs.length ? { sameAs } : {};
+          })(),
         }}
       />
 

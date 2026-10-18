@@ -74,11 +74,13 @@ async function main() {
       ? a.avatar.url
       : '';
 
-    const links = Array.isArray(a.sameAs) && a.sameAs.length
+    // Off-site profiles first (they also become sameAs on the author page), then the site links.
+    const profiles = Array.isArray(a.sameAs)
       ? a.sameAs
           .filter((l) => l && (l.href || l.url))
           .map((l) => `  - label: ${q(l.label ?? l.name ?? 'Profile')}\n    href: ${q(l.href ?? l.url)}`)
-      : ['  - label: How we test\n    href: /how-we-test/', '  - label: About this site\n    href: /about/'];
+      : [];
+    const links = [...profiles, '  - label: How we test\n    href: /how-we-test/', '  - label: About this site\n    href: /about/'];
 
     // The CMS has no long-profile field, so the body comes from the repo:
     // content/author-notes/<slug>.md, plain prose, shown verbatim on
