@@ -5,6 +5,7 @@
 // Usage:
 //   tsx add-images-to-post.ts <post-id>
 //   AI_PROVIDER=openrouter tsx add-images-to-post.ts <post-id>
+//   tsx add-images-to-post.ts <post-id> --cover-only   # replace only the cover; keep the gallery
 
 import os from 'node:os';
 import path from 'node:path';
@@ -15,6 +16,7 @@ import { fal } from '@fal-ai/client';
 import * as rules from './content-rules.mjs';
 
 const postId = Number(process.argv[2]);
+const coverOnly = process.argv.includes('--cover-only');
 if (!postId) { console.error('Usage: tsx add-images-to-post.ts <post-id>'); process.exit(1); }
 
 const {
@@ -180,9 +182,21 @@ console.log(`  cover:     ${prompts.cover.slice(0, 100)}...`);
 console.log(`  gallery-1: ${prompts.gallery[0].slice(0, 100)}...`);
 console.log(`  gallery-2: ${prompts.gallery[1].slice(0, 100)}...`);
 
-console.log('\nGenerating 3 images with fal.ai FLUX Schnell...');
 const base = String(post.title || 'post').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
 
+if (coverOnly) {
+  console.log('\nGenerating the cover with fal.ai FLUX Schnell (--cover-only)...');
+  const url = await generateImage(prompts.cover, 'landscape_16_9');
+  const sections = (content.match(/^##\s+(.+)/gm) ?? []).map(h => h.replace(/^##\s+/, '').replace(/\*\*/g, '').trim()).filter(h => !/^(sources|references|faq|frequently asked|related guides)/i.test(h));
+  const alt = rules.imageAltText({ title: post.title, seoTitle: post.seoTitle, sections, body: content, kind: 'cover', prompt: prompts.cover });
+  const id = await saveImage(payload, url, `${base}-cover`, alt);
+  await payload.update({ collection: 'posts', id: postId, data: { coverImage: id, _status: post._status }, overrideAccess: true });
+  console.log(`\nUpdated post ${postId}: cover=${id} (gallery unchanged)`);
+  await payload.destroy();
+  process.exit(0);
+}
+
+console.log('\nGenerating 3 images with fal.ai FLUX Schnell...');
 const [coverUrl, g1Url, g2Url] = await Promise.all([
   generateImage(prompts.cover, 'landscape_16_9'),
   generateImage(prompts.gallery[0], 'landscape_4_3'),
@@ -208,7 +222,7 @@ const [coverId, g1Id, g2Id] = await Promise.all([
 await payload.update({
   collection: 'posts',
   id: postId,
-  data: { coverImage: coverId, gallery: [g1Id, g2Id] },
+  data: { coverImage: coverId, gallery: [g1Id, g2Id], _status: post._status },
   overrideAccess: true,
 });
 
