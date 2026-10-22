@@ -69,28 +69,46 @@ export function affiliateUrl(rawUrl: string, options: AffiliateOptions = {}): st
 const A_TAG = /<a\b[^>]*>/gi;
 const HREF_ATTR = /\shref\s*=\s*(["'])(.*?)\1/i;
 const REL_TARGET_ATTR = /\s(?:rel|target)\s*=\s*(["']).*?\1/gi;
+/**
+ * The stores in the merchant list, by their shop host only (help., catalogue.
+ * and brand sites such as apple.com stay plain: articles cite those as sources).
+ * Sovrn affiliates these on click, so in-text links to them are paid links.
+ */
+const RETAILER_HOST =
+  /^(?:www\.)?(?:(?:jbhifi|thegoodguys|bunnings|harveynorman|officeworks|bigw|binglee|dicksmith|domayne|jaycar|kmart|mobileciti|mwave|scorptec|videopro|beaconlighting|appliancesonline|woolworths|reebelo)\.com\.au|kogan\.com)$/i;
 
 /**
- * affiliateUrl() for every link in an HTML fragment: article bodies, product
- * descriptions, research notes and CMS pages carry hand-written Amazon/eBay
- * links that never pass through AffiliateLink. Each one rewritten gets the
- * same target/rel as a buy button; every other link is left as it is, for
- * Sovrn to affiliate in the browser.
+ * Affiliate handling for every link in an HTML fragment: article bodies,
+ * product descriptions, research notes and CMS pages carry hand-written links
+ * that never pass through AffiliateLink. Amazon/eBay go through affiliateUrl();
+ * those and links to the retailers Sovrn affiliates get the buy-button
+ * target/rel. Every other link is left as it is.
  */
 export function affiliateHtmlLinks(html: string): string {
-  if (!GENIUSLINK_ENABLED || !html) return html;
+  if (!AFFILIATE_ENABLED || !html) return html;
   return html.replace(A_TAG, (tag) => {
     const m = tag.match(HREF_ATTR);
     if (!m) return tag;
     const raw = m[2].replace(/&amp;/g, '&');
     const out = affiliateUrl(raw);
-    if (out === raw) return tag;
+    if (out === raw) {
+      let host = '';
+      try {
+        host = new URL(raw).hostname;
+      } catch {
+        return tag;
+      }
+      if (!VIGLINK_KEY || !RETAILER_HOST.test(host)) return tag;
+    }
     return tag
       .replace(m[0], ` href="${out.replace(/&/g, '&amp;')}"`)
       .replace(REL_TARGET_ATTR, '')
       .replace(/^<a\b/i, `<a target="${affiliateLinkAttrs.target}" rel="${affiliateLinkAttrs.rel}"`);
   });
 }
+
+/** Whether an HTML fragment holds a paid link (run affiliateHtmlLinks first). */
+export const hasSponsoredLink = (html: string): boolean => /\srel="sponsored\b/i.test(html);
 
 /**
  * Which networks are live. Surfaced on /affiliate-disclosure/ so the disclosure page

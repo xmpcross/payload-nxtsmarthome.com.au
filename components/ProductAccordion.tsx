@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
-import { AFFILIATE_ENABLED, affiliateHtmlLinks } from '@/lib/affiliate';
+import { AFFILIATE_ENABLED, affiliateHtmlLinks, hasSponsoredLink } from '@/lib/affiliate';
 import { bulletsOf } from '@/lib/bullets';
 import { featureItems, isFeatureSpec } from '@/lib/feature-specs';
 import { splitDescriptionFaqs } from '@/lib/description-faq';
@@ -310,8 +310,9 @@ export default function ProductAccordion({
             {updated ? <InfoRow label="Last Updated" value={updated} /> : null}
           </dl>
 
-          {/* No retailer, no prices and no affiliate links on the page: nothing to disclose. */}
-          {retailerNames.length ? (
+          {/* No retailer, no prices and no affiliate links on the page: nothing to disclose.
+              A description with paid links still needs the notice. */}
+          {retailerNames.length || hasSponsoredLink(descriptionHtml) ? (
           <p className="mt-4 text-xs text-[#55555a] dark:text-slate-400">
             Prices are indicative and in Australian dollars — confirm on the retailer&apos;s site.
             {AFFILIATE_ENABLED && (
