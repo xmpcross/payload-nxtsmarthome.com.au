@@ -23,14 +23,14 @@ import { ZENROWS_RETAILERS, hostAllowed, matchRetailer, resolveMerchants, retail
 import { DataForSeoClient, PUBLISHED_COST, SERP_SIZE, serpsFor, spec, type DfsProductInfo } from './lib/dataforseo'
 import { extractPrice, extractSearchResults } from './lib/extract-price'
 import { chooseLink, linkQuery, summariseLinks, type LinkResult } from './lib/link'
-import { findInCatalogue, identityMatch, normaliseGtin } from './lib/match'
-import { planProduct, summarise, type Change, type Observation, type ProductPlan } from './lib/plan'
+import { distinctiveModelTokens, findInCatalogue, identityMatch, normaliseGtin } from './lib/match'
+import { isSearchUrl, planProduct, summarise, type Change, type Observation, type ProductPlan } from './lib/plan'
 import { acquireLock, latestReport, renderMarkdown, saveReport, type CostEstimate, type FillCandidate, type RunReport, type SearchCandidate } from './lib/report'
 import { applyLinks, applyPlans, loadCatalogue, loadMerchants, type CatalogueProduct } from './lib/store'
 import { RequestBudgetExceeded, ZenRowsClient } from './lib/zenrows'
 
 // ---------------------------------------------------------------- arguments
-const BOOLEAN_FLAGS = new Set(['write', 'drop-stale', 'verify', 'fill', 'help', 'inactive', 'all'])
+const BOOLEAN_FLAGS = new Set(['write', 'drop-stale', 'verify', 'fill', 'search-only', 'help', 'inactive', 'all'])
 function parseArgs(argv: string[]) {
   const positional: string[] = []
   const flags = new Map<string, string | true>()
@@ -69,6 +69,7 @@ const USAGE = `Usage: prices.sh <command> [options]
           [--write] [--max-cost 1]             (--write sets googleProductId on MATCHED products only)
   zenrows [--product slug] [--retailer name]   Verify offer prices on retailer pages (--verify, default)
           [--verify] [--fill] [--limit N]      and/or fill missing supported retailers (--fill)
+          [--search-only]                      with --fill: only offers that are a retailer search page
           [--write] [--max-requests 50]
   report                                       Show the last saved run report
 
@@ -292,7 +293,8 @@ async function zenrows(payload: Payload, report: RunReport, manifest: Manifest) 
 
     if (doVerify) {
       for (const offer of p.offers) {
-        if (!offer.active || !/^https?:\/\//i.test(offer.url)) continue
+        // A search-results page has no single price to verify; --fill handles those offers.
+        if (!offer.active || !/^https?:\/\//i.test(offer.url) || isSearchUrl(offer.url)) continue
         const retailer = retailerByName(offer.merchantName) ?? retailerByUrl(offer.url)
         if (!retailer?.zenrows || !supported.has(retailer.name)) continue
         if (!hostAllowed(retailer, offer.url)) { skips.push({ kind: 'skip', retailer: retailer.name, reason: `offer #${offer.id} URL is not on the ${retailer.name} host allow-list`, url: offer.url }); continue }
@@ -310,7 +312,11 @@ async function zenrows(payload: Payload, report: RunReport, manifest: Manifest) 
       for (const retailer of retailers) {
         const merchant = lookup.get(retailer.name)
         if (!merchant) { skips.push({ kind: 'skip', retailer: retailer.name, reason: 'no Merchant record in Payload (not created)' }); continue }
-        if (p.offers.some((o) => o.merchantId === merchant.id)) continue
+        // A retailer whose only offer is a search-results page is a gap too: a match
+        // becomes an UPDATE with the direct URL (planProduct). Inactive offers still block.
+        if (p.offers.some((o) => o.merchantId === merchant.id && (!o.active || !isSearchUrl(o.url)))) continue
+        // --search-only: only replace search-page offers; spend nothing on retailers with no offer.
+        if (flags.has('search-only') && !p.offers.some((o) => o.merchantId === merchant.id)) continue
         jobs.push(guarded(`fill ${p.slug} @ ${retailer.name}`, () => fillOne(p, retailer, merchant, zr, observations, skips, fillCandidates)))
       }
     }
@@ -336,11 +342,13 @@ async function fillOne(p: CatalogueProduct, retailer: AuRetailer, merchant: Merc
   const z = retailer.zenrows!
   const query = `${p.brand ?? ''} ${p.name}`.trim()
   const searchUrl = z.search(query)
-  const res = await zr.fetchHtml(searchUrl, { jsRender: z.jsRender, fixtureKey: `search:${retailer.name}:${p.slug}` })
+  const res = await zr.fetchHtml(searchUrl, { jsRender: z.jsRender, waitMs: z.searchWaitMs, fixtureKey: `search:${retailer.name}:${p.slug}` })
   if (!res.ok) { skips.push({ kind: 'skip', retailer: retailer.name, reason: `search fetch failed: ${res.error}` }); return }
   const results = extractSearchResults(res.html, searchUrl, z.productPath, 8)
   if (!results.length) { skips.push({ kind: 'skip', retailer: retailer.name, reason: 'search page had no product results' }); return }
-  const scored = results.map((r) => ({ ...r, id: identityMatch({ brand: p.brand, name: p.name, gtin: p.gtin }, { title: r.title }) }))
+  // Spec-like tokens ("2nd", "128gb", "4k") are not identity: "Apple ... 2nd Generation" matched an Apple Pencil.
+  const models = distinctiveModelTokens(p.name)
+  const scored = results.map((r) => ({ ...r, id: identityMatch({ brand: p.brand, name: p.name, gtin: p.gtin }, { title: r.title }, { models }) }))
   const hit = scored.find((r) => r.id.match)
   if (!hit) {
     for (const r of scored.slice(0, 3)) candidates.push({ product: p.slug, retailer: retailer.name, title: r.title, url: r.url, reason: r.id.reason })
@@ -350,7 +358,7 @@ async function fillOne(p: CatalogueProduct, retailer: AuRetailer, merchant: Merc
   if (!page.ok) { candidates.push({ product: p.slug, retailer: retailer.name, title: hit.title, url: hit.url, reason: `title matched (${hit.id.reason}) but product page fetch failed: ${page.error}` }); return }
   const x = extractPrice(page.html, retailer.name)
   // The product page has the final say on identity when it states a GTIN.
-  const pageId = x.gtin && p.gtin ? identityMatch({ brand: p.brand, name: p.name, gtin: p.gtin }, { title: x.title ?? hit.title, gtin: x.gtin }) : hit.id
+  const pageId = x.gtin && p.gtin ? identityMatch({ brand: p.brand, name: p.name, gtin: p.gtin }, { title: x.title ?? hit.title, gtin: x.gtin }, { models }) : hit.id
   if (!pageId.match) { candidates.push({ product: p.slug, retailer: retailer.name, title: x.title ?? hit.title, url: hit.url, reason: pageId.reason, price: x.price }); return }
   if (x.price == null) { candidates.push({ product: p.slug, retailer: retailer.name, title: hit.title, url: hit.url, reason: `matched (${pageId.reason}) but no price on page: ${x.reason}` }); return }
   observations.push({ retailer: retailer.name, merchantId: merchant.id, price: x.price, url: hit.url, source: 'zenrows', kind: 'price', sellerTitle: x.title ?? hit.title, availability: x.availability })

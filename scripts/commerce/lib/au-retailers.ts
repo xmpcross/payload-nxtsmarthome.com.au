@@ -17,6 +17,8 @@ export interface ZenRowsProfile {
   productPath: RegExp
   /** Whether the page needs a headless browser (more ZenRows credits). */
   jsRender: boolean
+  /** Milliseconds ZenRows waits after rendering a search page (results load late). */
+  searchWaitMs?: number
 }
 
 export interface AuRetailer {
@@ -34,7 +36,7 @@ const q = (s: string) => encodeURIComponent(s)
 
 export const AU_RETAILERS: AuRetailer[] = [
   { name: 'JB Hi-Fi', patterns: ['jb hi-fi', 'jbhifi', 'jb hifi'], hosts: ['jbhifi.com.au'],
-    zenrows: { search: (s) => `https://www.jbhifi.com.au/search?query=${q(s)}`, productPath: /\/products\/[a-z0-9-]+/i, jsRender: true } },
+    zenrows: { search: (s) => `https://www.jbhifi.com.au/search?query=${q(s)}`, productPath: /\/products\/[a-z0-9-]+/i, jsRender: true, searchWaitMs: 6000 } },
   { name: 'The Good Guys', patterns: ['good guys'], hosts: ['thegoodguys.com.au'],
     zenrows: { search: (s) => `https://www.thegoodguys.com.au/SearchDisplay?searchTerm=${q(s)}`, productPath: /^\/[a-z0-9-]+-[a-z0-9]+$/i, jsRender: true } },
   { name: 'Harvey Norman', patterns: ['harvey norman'], hosts: ['harveynorman.com.au'],

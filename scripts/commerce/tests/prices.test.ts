@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { extractPrice, extractSearchResults, parseAud } from '../lib/extract-price'
 import { planProduct, mergeSourceData, productPriceAfter, type PlanProduct, type PlanOffer, type Observation } from '../lib/plan'
 import { matchRetailer, resolveMerchants, hostAllowed, retailerByName } from '../lib/au-retailers'
-import { identityMatch, findInCatalogue, modelTokens } from '../lib/match'
+import { identityMatch, findInCatalogue, modelTokens, distinctiveModelTokens } from '../lib/match'
 
 const FIX = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'zenrows')
 const html = (f: string) => fs.readFileSync(path.join(FIX, f), 'utf8')
@@ -108,6 +108,16 @@ test('search results from anchors and from JSON-LD ItemList', () => {
   assert.equal(jb[0].title, 'Aqara Hub M100 (White)')
 })
 
+test('Amazon search cards: brand + title and a clean /dp/ URL; the right one matches', () => {
+  const r = extractSearchResults(html('amazon-search-aqara-m3.html'), 'https://www.amazon.com.au/s?k=x', /\/dp\/[A-Z0-9]{10}/)
+  assert.equal(r.length, 3)
+  assert.ok(r[0].title.startsWith('Aqara Hub M3,'))
+  assert.equal(r[0].url, 'https://www.amazon.com.au/dp/B0D3M477QD')
+  const m3 = { brand: 'Aqara', name: 'Hub M3' }
+  const models = distinctiveModelTokens(m3.name)
+  assert.deepEqual(r.map((x) => identityMatch(m3, { title: x.title }, { models }).match), [true, false, false])
+})
+
 // ------------------------------------------------------------ retailers / identity
 test('matchRetailer: AU retailers, exclusions and host allow-list', () => {
   const m = matchRetailer('Amazon AU - Amazon.com.au', 'https://www.amazon.com.au/dp/X')
@@ -126,6 +136,16 @@ test('resolveMerchants reports retailers without a Merchant record', () => {
   const { lookup, missing } = resolveMerchants([{ id: 1, name: 'Amazon AU' }, { id: 2, name: 'jb hi-fi' }])
   assert.equal(lookup.get('Amazon AU')?.id, 1); assert.equal(lookup.get('JB Hi-Fi')?.id, 2)
   assert.ok(missing.includes('Costco AU'))
+})
+
+test('fill matching: spec tokens are not identity; faulty/used listings never match (22 Oct 2026 dry run)', () => {
+  const homepod = { brand: 'Apple', name: 'HomePod (2nd Generation)' }
+  const models = distinctiveModelTokens(homepod.name)
+  assert.deepEqual(models, [])
+  assert.equal(identityMatch(homepod, { title: 'Apple Pencil (2nd Generation)' }, { models }).match, false)
+  const r = identityMatch({ brand: 'Aqara', name: 'Hub M100' }, { title: 'Aqara Hub M100 sensor issues SEE DESCRIPTION' })
+  assert.ok(!r.match && r.reason.includes('condition'))
+  assert.equal(identityMatch({ brand: 'Aqara', name: 'Hub M100' }, { title: 'Aqara Hub M100 faulty' }).match, false)
 })
 
 test('identityMatch needs brand + model or GTIN', () => {
@@ -207,6 +227,18 @@ test('search-URL offers get the direct URL and a missing price is filled', () =>
   assert.equal(plan.newPriceAud, 50)
 })
 
+test('search-URL offers flagged deepLink still get the direct URL, even at the same price', () => {
+  const p = product([offer({ id: 10, merchantId: 1, merchantName: 'A', priceAud: 50, deepLink: true, url: 'https://www.jbhifi.com.au/search?query=x' })])
+  const plan = planProduct(p, [obs({ retailer: 'A', merchantId: 1, price: 50, url: 'https://www.jbhifi.com.au/products/x' })], { now: NOW })
+  const u = plan.changes[0]
+  assert.ok(u.kind === 'update' && u.newPrice === 50 && u.newUrl === 'https://www.jbhifi.com.au/products/x')
+  // A direct offer is left alone, and a search URL is never written as the "direct" one.
+  const d = product([offer({ id: 11, merchantId: 1, merchantName: 'A', priceAud: 50, url: 'https://www.jbhifi.com.au/products/x' })])
+  assert.equal(planProduct(d, [obs({ retailer: 'A', merchantId: 1, price: 50, url: 'https://www.jbhifi.com.au/products/y' })], { now: NOW }).changes[0].kind, 'verified')
+  const s = product([offer({ id: 12, merchantId: 1, merchantName: 'A', priceAud: 50, url: 'https://www.amazon.com.au/s?k=x' })])
+  assert.equal(planProduct(s, [obs({ retailer: 'A', merchantId: 1, price: 50, url: 'https://www.amazon.com.au/s?k=y' })], { now: NOW }).changes[0].kind, 'verified')
+})
+
 test('stale offers are reported; cleared only with dropStale; never when seen', () => {
   const p = product([
     offer({ id: 10, merchantId: 1, merchantName: 'A', priceAud: 80, sourceData: { checkedAt: '2026-09-01T00:00:00Z' } }),
@@ -246,4 +278,12 @@ test('mergeSourceData keeps existing keys and never replaces non-objects', () =>
   assert.deepEqual(mergeSourceData(null, { a: 1 }), { a: 1 })
   assert.equal(mergeSourceData('legacy', { a: 1 }), null)
   assert.equal(mergeSourceData([1], { a: 1 }), null)
+})
+
+test('JB Hi-Fi rendered search: only result cards, not header promos', () => {
+  const r = extractSearchResults(html('jbhifi-search-rendered-m100.html'), 'https://www.jbhifi.com.au/search?query=x', /\/products\/[a-z0-9-]+/i)
+  assert.deepEqual(r.map((x) => x.url), ['https://www.jbhifi.com.au/products/aqara-u100-with-m100-smart-lock-hub-kit'])
+  assert.equal(r[0].title, 'Aqara U100 with M100 Smart Lock Hub Kit')
+  // A lock kit that includes the hub is not the hub.
+  assert.equal(identityMatch({ brand: 'Aqara', name: 'Hub M100' }, { title: r[0].title }, { models: distinctiveModelTokens('Hub M100') }).match, false)
 })

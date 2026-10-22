@@ -13,6 +13,9 @@ export const normalise = (s: string | null | undefined) => (s || '').toLowerCase
 const VARIANT_WORDS = ['pro', 'plus', 'max', 'mini', 'lite', 'ultra', 'air', 'xl', 'se', 'gen', 'generation', 'kit', 'bundle', 'pack']
 const ACCESSORY_WORDS = ['filter', 'filters', 'replacement', 'case', 'cover', 'mount', 'bracket', 'charger', 'cable', 'adapter', 'adaptor',
   'skin', 'stand', 'refurbished', 'renewed', 'used', 'spare', 'parts', 'compatible', 'for']
+/** Condition words in a listing title (mostly eBay): never the new product the catalogue describes. */
+const CONDITION_WORDS = ['faulty', 'broken', 'damaged', 'issue', 'issues', 'defective', 'cracked', 'untested', 'preowned', 'pre owned',
+  'second hand', 'secondhand', 'open box', 'ex demo', 'demo', 'as is', 'not working', 'see description', 'read description', 'for parts']
 
 const ECOSYSTEM_PHRASE = / (works with|compatible with|for) (amazon alexa|alexa|google home|google assistant|google|apple homekit|apple home|homekit|siri|smartthings|home assistant|matter)(?= )/g
 
@@ -67,6 +70,8 @@ export function identityMatch(product: IdentityInput, candidate: CandidateInput,
   // "Compatible with Alexa" / "for Google Home" describe the ecosystem, not an accessory.
   const title = ` ${normalise(candidate.title)} `.replace(ECOSYSTEM_PHRASE, ' ')
   const productWords = new Set(normalise(`${product.brand ?? ''} ${product.name}`).split(' '))
+  const condition = CONDITION_WORDS.filter((w) => title.includes(` ${w} `))
+  if (condition.length) return { match: false, reason: `listing condition word(s) in title: ${condition.join(', ')}` }
   const brands = brandAliases(product.brand)
   if (!brands.length) return { match: false, reason: 'product has no brand' }
   const brandHit = brands.some((b) => title.includes(` ${b} `)) || (candidate.brand ? brands.includes(normalise(candidate.brand)) : false)

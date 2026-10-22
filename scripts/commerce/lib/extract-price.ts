@@ -213,6 +213,31 @@ export function extractSearchResults(html: string, baseUrl: string, productPath:
     seen.add(key)
     out.push({ title: clean, url: url.toString() })
   }
+  // Amazon result cards: the brand is its own <h2> above the title <h2>, and the
+  // generic link scan below picks up the brand-less title or a colour swatch
+  // ("Charcoal") instead. Brand + title, with a clean /dp/<ASIN> URL.
+  for (const card of html.split(/(?=<div\b[^>]*data-component-type="s-search-result")/i).slice(1)) {
+    const asin = card.match(/^<div\b[^>]*\bdata-asin="([A-Z0-9]{10})"/i)?.[1]
+    if (!asin) continue
+    const body = card.slice(0, 30000)
+    const heads = [...body.matchAll(/<h2\b[\s\S]*?<\/h2>/gi)].slice(0, 2).map((m) => stripTags(m[0])).filter(Boolean)
+    add(heads.join(' '), `/dp/${asin}`)
+    if (out.length >= max) return out
+  }
+  // JB Hi-Fi product cards: header promos link to /products/ too, so read only the
+  // cards (title from product-card-title) once the results container is there.
+  const jbAt = html.indexOf('id="search-results-container"')
+  if (jbAt !== -1) {
+    for (const card of html.slice(jbAt).split(/(?=<div\b[^>]*data-testid="product-card-content")/i).slice(1)) {
+      const body = card.slice(0, 8000)
+      const href = body.match(/href="(\/products\/[^"]+)"/i)?.[1]
+      const title = body.match(/data-testid="product-card-title"[^>]*>([\s\S]*?)<\/div>/i)?.[1]
+      add(title, href)
+      if (out.length >= max) return out
+    }
+    return out
+  }
+  if (out.length) return out
   for (const node of jsonLdNodes(html)) {
     if (!hasType(node, 'ItemList')) continue
     for (const el of [].concat(node.itemListElement ?? []) as any[]) {

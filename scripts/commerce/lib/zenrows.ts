@@ -27,7 +27,7 @@ export interface ZenRowsOptions {
   log?: (msg: string) => void
 }
 
-export interface FetchOptions { jsRender?: boolean; fixtureKey?: string; autoparse?: boolean }
+export interface FetchOptions { jsRender?: boolean; waitMs?: number; fixtureKey?: string; autoparse?: boolean }
 export interface FetchResult { ok: boolean; status: number; html: string; credits: number; error?: string; fromFixture?: boolean }
 
 export class ZenRowsClient {
@@ -63,6 +63,7 @@ export class ZenRowsClient {
       const params = new URLSearchParams({ apikey: this.opts.apiKey!, url, premium_proxy: 'true', proxy_country: 'au', antibot: 'true' })
       if (o.jsRender) params.set('js_render', 'true')
       if (o.autoparse) params.set('autoparse', 'true')
+      if (o.jsRender && o.waitMs) params.set('wait', String(o.waitMs))
       const retries = this.opts.retries ?? 2
       let last: FetchResult = { ok: false, status: 0, html: '', credits: 0, error: 'not attempted' }
       for (let attempt = 0; attempt <= retries; attempt++) {

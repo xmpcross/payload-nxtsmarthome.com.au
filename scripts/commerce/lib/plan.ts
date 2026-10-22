@@ -87,6 +87,12 @@ export interface PlanOptions {
 export const round2 = (n: number) => Math.round(n * 100) / 100
 const samePrice = (a: number | null | undefined, b: number | null | undefined) => typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) < 0.005
 const isAbsolute = (u: string | null | undefined) => typeof u === 'string' && /^https?:\/\//i.test(u)
+/**
+ * A retailer search-results page rather than a product page. The migrated offers
+ * all carry deepLink: true, search URLs included, so the flag alone cannot say.
+ */
+export const isSearchUrl = (u: string | null | undefined) =>
+  typeof u === 'string' && /(\/s\?k=|\/sch\/|\/search\b|\/catalogsearch\/|SearchDisplay|[?&](q|query|text|searchTerm|_nkw)=)/i.test(u)
 const outside = (ratio: number, hold: number) => ratio > hold || ratio < 1 / hold
 
 export function median(nums: number[]): number | null {
@@ -150,7 +156,8 @@ export function planProduct(product: PlanProduct, observations: Observation[], o
         continue
       }
       const old = existing.priceAud
-      const upgradeUrl = !verify && obs.url && isAbsolute(obs.url) && (!existing.deepLink || !isAbsolute(existing.url)) ? obs.url : undefined
+      const upgradeUrl = !verify && obs.url && isAbsolute(obs.url) && !isSearchUrl(obs.url)
+        && (!existing.deepLink || !isAbsolute(existing.url) || isSearchUrl(existing.url)) ? obs.url : undefined
       if (typeof old === 'number' && old > 0 && !samePrice(old, price) && outside(price / old, hold)) {
         changes.push({ kind: 'hold', offerId: existing.id, retailer: obs.retailer, oldPrice: old, newPrice: price, ratio: round2(price / old), source: obs.source, url: obs.url,
           note: `change of x${round2(price / old)} exceeds the x${hold} hold limit` })

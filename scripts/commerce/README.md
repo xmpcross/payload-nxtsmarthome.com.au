@@ -124,7 +124,20 @@ Amazon AU, JB Hi-Fi, Harvey Norman, The Good Guys, eBay AU and Bunnings.
   plus model number**, or when the product page's GTIN matches the product's GTIN.
   Every other result is listed under "Gap-fill candidates" and is never written. A
   product whose name has no model number (no token mixing letters and digits) can
-  only be matched by GTIN.
+  only be matched by GTIN. Spec-like tokens ("2nd", "4k", "128gb") do not count as a
+  model number, and listings with condition words ("faulty", "issues", "see
+  description", "open box"…) never match.
+  A retailer whose only offer is a search-results page (`/s?k=`, `/search`, `?q=`…)
+  counts as missing: a match replaces the search URL with the product URL (`UPDATE
+  … (+ direct URL)`). `--search-only` limits `--fill` to those offers, so no requests
+  are spent on retailers with no offer. Amazon results are read from its result cards
+  (brand + title, clean `/dp/<ASIN>` URL).
+- JB Hi-Fi search results load after the page renders, so its search is fetched with
+  a 6 s render wait (`searchWaitMs`) and read from the result cards only (header
+  promos also link to `/products/`).
+- **Known gaps (22 Oct 2026):** The Good Guys search comes back without results even
+  with a render wait, so `--fill` finds nothing there; Scorptec, Bing Lee, Mwave,
+  Officeworks and Kogan are not supported.
 
 Prices are extracted in this order:
 
