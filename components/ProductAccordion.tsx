@@ -93,8 +93,11 @@ export default function ProductAccordion({
   product,
   researchNotes,
   sources,
+  paidLinks = false,
 }: {
   product: TopProduct;
+  /** The research notes or sources hold affiliate links, so the commission notice shows even with no offers. */
+  paidLinks?: boolean;
   /** "Our Research Notes" tab, server-rendered (components/ProductEditorial.tsx). */
   researchNotes?: React.ReactNode;
   /** "Sources" tab, the note's source list (components/ProductEditorial.tsx). */
@@ -311,8 +314,8 @@ export default function ProductAccordion({
           </dl>
 
           {/* No retailer, no prices and no affiliate links on the page: nothing to disclose.
-              A description with paid links still needs the notice. */}
-          {retailerNames.length || hasSponsoredLink(descriptionHtml) ? (
+              A description, research note or source list with paid links still needs the notice. */}
+          {retailerNames.length || paidLinks || hasSponsoredLink(descriptionHtml) ? (
           <p className="mt-4 text-xs text-[#55555a] dark:text-slate-400">
             Prices are indicative and in Australian dollars — confirm on the retailer&apos;s site.
             {AFFILIATE_ENABLED && (

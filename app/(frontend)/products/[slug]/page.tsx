@@ -11,7 +11,7 @@ import RetailerPriceList from '@/components/RetailerPriceList';
 import RetailerPriceTable from '@/components/RetailerPriceTable';
 import JsonLd from '@/components/JsonLd';
 import { bulletsOf } from '@/lib/bullets';
-import { AFFILIATE_ENABLED } from '@/lib/affiliate';
+import { AFFILIATE_ENABLED, hasSponsoredLink } from '@/lib/affiliate';
 import { getAllProducts, getAllTopProducts, getCuratedProduct, getProductBySlug, getShoppableTopProducts, getTopProductBySlug, isIndexableProduct } from '@/lib/products';
 import { editorialParts, ProductResearchNotes, ProductSources } from '@/components/ProductEditorial';
 import { breadcrumbJsonLd, metaDescription, pageAlternates, pageTitle, productJsonLd } from '@/lib/seo';
@@ -343,6 +343,7 @@ export default async function ProductDetailPage({
               product={forClient}
               researchNotes={editorial && notes?.hasNotes ? <ProductResearchNotes product={editorial} html={notes.notesHtml} /> : null}
               sources={notes?.sourcesHtml ? <ProductSources html={notes.sourcesHtml} /> : null}
+              paidLinks={hasSponsoredLink(`${notes?.notesHtml ?? ''}${notes?.sourcesHtml ?? ''}`)}
             />
 
             {/* Reviews sit directly beneath the Additional Info panel */}
