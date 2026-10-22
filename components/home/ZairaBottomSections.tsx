@@ -491,6 +491,7 @@ export default function ZairaBottomSections({ posts, categories = [] }: Props) {
             <div className="grid grid-cols-2 gap-2.5">
               {[
                 ...(site.social.facebook ? [{ name: 'Facebook', href: site.social.facebook, external: true }] : []),
+                ...(site.social.twitter ? [{ name: 'X (Twitter)', href: site.social.twitter, external: true }] : []),
                 { name: 'RSS feed', href: '/feed.xml', external: false },
               ].map((item) => (
                 <a

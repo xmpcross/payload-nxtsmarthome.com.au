@@ -46,7 +46,7 @@ export const site = {
     editor: { name: 'Kritin Curtis', slug: 'kritin-curtis' },
   },
   social: {
-    twitter: '',
+    twitter: 'https://x.com/nxtsmarthome',
     youtube: '',
     facebook: 'https://www.facebook.com/nxtsmarthome/',
   },

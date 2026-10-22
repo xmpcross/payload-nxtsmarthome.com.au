@@ -63,9 +63,10 @@ const shareUrl = encodeURIComponent(`${site.url}/`)
 const shareText = encodeURIComponent(`${site.name}: smart home guides for Australian homes`)
 
 /*
- * Footer icons. Only Facebook is a profile; Twitter/X, Reddit and WhatsApp are
- * "share this site" links, because the site has no profile on them (add one to
- * site.social and link it here to change that).
+ * Footer icons. Facebook and X are profiles (site.social); Reddit is a "share
+ * this site" link, because the site has no profile there. X falls back to a
+ * share link if site.social.twitter is emptied. WhatsApp was removed (user
+ * request, 23 Oct 2026).
  */
 const socials: { label: string; href: string; external?: boolean; icon: React.ReactNode }[] = [
   ...(site.social.facebook
@@ -83,8 +84,8 @@ const socials: { label: string; href: string; external?: boolean; icon: React.Re
       ]
     : []),
   {
-    label: `Share ${site.name} on X (Twitter)`,
-    href: `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareText}`,
+    label: site.social.twitter ? `${site.name} on X (Twitter)` : `Share ${site.name} on X (Twitter)`,
+    href: site.social.twitter || `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareText}`,
     external: true,
     icon: (
       <svg {...svgProps} fill="currentColor">
@@ -106,17 +107,6 @@ const socials: { label: string; href: string; external?: boolean; icon: React.Re
         <circle cx="18" cy="4.2" r="1.2" />
         <circle cx="4.2" cy="11.5" r="1.6" />
         <circle cx="19.8" cy="11.5" r="1.6" />
-      </svg>
-    ),
-  },
-  {
-    label: `Share ${site.name} on WhatsApp`,
-    href: `https://wa.me/?text=${shareText}%20${shareUrl}`,
-    external: true,
-    icon: (
-      <svg {...svgProps} {...stroke}>
-        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-        <path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1.3-1.6-2-1-.9.8c-.9-.4-1.6-1.1-2-2l.8-.9-1-2L9 9.5Z" />
       </svg>
     ),
   },
