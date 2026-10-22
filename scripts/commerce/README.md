@@ -46,7 +46,7 @@ flags only choose products: no command ever changes a product's `active` flag.
 
 ### `refresh [--inactive|--all] [--product slug] [--limit N] [--write] [--drop-stale] [--no-link] [--no-amazon] [--max-cost 1]`
 
-The daily job (cronmanager job 42). It covers every product in scope in three passes,
+The weekly job (cronmanager job 42). It covers every product in scope in three passes,
 in budget order:
 
 1. **Google Shopping** `product_info` for each product that has a `googleProductId`: the
@@ -255,8 +255,11 @@ matcher, identity matching, and the plan rules (update, add, hold, stale,
 ## Scheduling
 
 Scheduled through cronmanager (`/opt/cronmanager`): job 42 runs
-`refresh --limit 400 --write --max-cost 0.50` daily at 04:30 UTC, logging to
-`/var/log/nxtsmarthome-prices.log`. The lock makes overlapping runs safe. ZenRows
+`refresh --limit 400 --write --max-cost 1.50` **weekly**, Sundays at 04:30 UTC (12:30
+Perth), logging to `/var/log/nxtsmarthome-prices.log`. One weekly run has to cover the
+whole catalogue, so its budget allows all three passes (about $0.80 a run): the 7-day
+link retry then re-searches unmatched products every run, and an offer not seen in two
+consecutive runs shows as `STALE` (14 days). The lock makes overlapping runs safe. ZenRows
 (job 43) was retired on 22 October 2026; the tool no longer has a `zenrows` command.
 
 The exit code is non-zero on errors, including failed writes.
