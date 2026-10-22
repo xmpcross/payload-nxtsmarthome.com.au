@@ -65,3 +65,19 @@ test('product-page patterns accept the stored direct URLs and reject search/cate
   assert.equal(retailerByName('The Good Guys')!.productPath!.test('/smart-home'), false)
   assert.equal(retailerByName('eBay AU')!.productPath, undefined)
 })
+
+test('refresh Amazon pass: ASINs from offer URLs; uncovered active offers, least recently checked first', async () => {
+  const { amazonAsin, amazonOffersToCheck } = await import('../lib/fill')
+  assert.equal(amazonAsin('https://www.amazon.com.au/Aqara-Automation/dp/B0D3M477QD/ref=sr_1_1?x=1'), 'B0D3M477QD')
+  assert.equal(amazonAsin('https://www.amazon.com.au/gp/product/b0d3m477qd'), 'B0D3M477QD')
+  assert.equal(amazonAsin('https://www.amazon.com/dp/B0D3M477QD'), null) // US store
+  assert.equal(amazonAsin('https://www.amazon.com.au/s?k=aqara'), null)
+  const offer = (id: number, merchantName: string, url: string, checkedAt?: string, active = true) => ({ id, active, merchantName, url, sourceData: checkedAt ? { checkedAt } : {} })
+  const products = [
+    { slug: 'a', offers: [offer(1, 'Amazon AU', 'https://www.amazon.com.au/dp/B000000001', '2026-10-20T00:00:00Z'), offer(2, 'JB Hi-Fi', 'https://www.jbhifi.com.au/products/x')] },
+    { slug: 'b', offers: [offer(3, 'Amazon AU', 'https://www.amazon.com.au/dp/B000000003'), offer(4, 'Amazon AU', 'https://www.amazon.com.au/dp/B000000004', undefined, false)] },
+    { slug: 'c', offers: [offer(5, 'Amazon AU', 'https://www.amazon.com.au/dp/B000000005', '2026-10-01T00:00:00Z')] },
+  ]
+  const todo = amazonOffersToCheck(products, (slug) => slug === 'c')
+  assert.deepEqual(todo.map((t) => t.offer.id), [3, 1]) // never checked first; covered (c) and inactive (4) skipped
+})

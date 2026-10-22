@@ -50,3 +50,32 @@ export function pickProductPage(product: IdentityInput, retailer: AuRetailer, it
   }
   return { hit: options.find((o) => o.id.match), options }
 }
+
+/** The ASIN of an Amazon AU product URL (/dp/ or /gp/product/), or null. */
+export function amazonAsin(url: string | null | undefined): string | null {
+  if (!url) return null
+  try {
+    const u = new URL(url)
+    if (!/(^|\.)amazon\.com\.au$/i.test(u.hostname)) return null
+    return u.pathname.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})(?:[/?]|$)/i)?.[1]?.toUpperCase() ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Active Amazon AU offers with an ASIN that Google Shopping did not cover in this run,
+ * least recently checked first, so a budget-limited daily run rotates through them all.
+ */
+export function amazonOffersToCheck<O extends { id: number; active: boolean; merchantName: string; url: string; sourceData: Record<string, unknown> }>(
+  products: Array<{ slug: string; offers: O[] }>, covered: (slug: string, offer: O) => boolean,
+) {
+  const out: Array<{ slug: string; offer: O; asin: string }> = []
+  for (const p of products) for (const offer of p.offers) {
+    if (!offer.active || offer.merchantName !== 'Amazon AU' || covered(p.slug, offer)) continue
+    const asin = amazonAsin(offer.url)
+    if (asin) out.push({ slug: p.slug, offer, asin })
+  }
+  const at = (o: O) => (typeof o.sourceData.checkedAt === 'string' ? Date.parse(o.sourceData.checkedAt) || 0 : 0)
+  return out.sort((a, b) => at(a.offer) - at(b.offer) || a.offer.id - b.offer.id)
+}

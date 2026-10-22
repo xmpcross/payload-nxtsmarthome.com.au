@@ -44,12 +44,29 @@ selects only products with `active = false` (for example the Amazon AU imports),
 `--all` selects both. `--product <slug>` picks one product whatever its scope. These
 flags only choose products: no command ever changes a product's `active` flag.
 
-### `refresh [--inactive|--all] [--product slug] [--limit N] [--write] [--drop-stale] [--max-cost 1]`
+### `refresh [--inactive|--all] [--product slug] [--limit N] [--write] [--drop-stale] [--no-link] [--no-amazon] [--max-cost 1]`
 
-Calls DataForSEO `product_info` for each product in scope that has a `googleProductId`.
-Products whose prices were checked least recently go first, so `--limit` (or a cron
-job) works through the whole catalogue over successive runs. For each AU retailer it
-finds:
+The daily job (cronmanager job 42). It covers every product in scope in three passes,
+in budget order:
+
+1. **Google Shopping** `product_info` for each product that has a `googleProductId`: the
+   prices and URLs of every AU retailer Google lists for it. Products whose prices were
+   checked least recently go first, so `--limit` (or a cron job) works through the whole
+   catalogue over successive runs.
+2. **Linking** (skipped with `--no-link`, `--product` or `--fixture`): a `link` search for
+   every product in scope with no `googleProductId`. Matches are linked with `--write` and
+   priced by pass 1 from the next run; products that do not match get
+   `sourceData.linkAttemptedAt` and are searched again after 7 days, not every day.
+3. **Amazon AU by ASIN** (skipped with `--no-amazon`): active Amazon offers with an
+   `/dp/<ASIN>` URL that pass 1 did not cover (Google Shopping often leaves Amazon out,
+   and unlinked products have no pass 1) are looked up with `merchant/amazon/asin`
+   ($0.0015 each), least recently checked first, within what is left of `--max-cost`.
+   An unavailable ASIN or one with no AUD price leaves the offer as it is.
+
+Other retailers' offers that Google Shopping does not list for a product cannot be priced
+through DataForSEO; they keep their last price and show as `STALE` after 14 days.
+
+For each AU retailer price found:
 
 | Situation | Plan entry | Written with `--write` |
 |---|---|---|

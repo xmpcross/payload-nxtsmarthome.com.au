@@ -26,15 +26,15 @@ export const LANGUAGE_CODE = 'en'
  * checked 2026-10-17): Products $0.001 per SERP of up to 40 results (depth 41-80 = 2 SERPs,
  * max depth 120 = 3 SERPs); Product Info $0.001 per product. Priority queue doubles both.
  */
-export const PUBLISHED_COST: Record<Endpoint, number> = { product_info: 0.001, products: 0.001, amazon_products: 0.0015, organic: 0.003 }
+export const PUBLISHED_COST: Record<Endpoint, number> = { product_info: 0.001, products: 0.001, amazon_products: 0.0015, organic: 0.003, amazon_asin: 0.0015 }
 /** Budget-guard estimate per unit (USD): the published price plus a 50% margin; replaced by the observed average once known. */
-export const ESTIMATED_COST: Record<Endpoint, number> = { product_info: 0.0015, products: 0.0015, amazon_products: 0.00225, organic: 0.0045 }
+export const ESTIMATED_COST: Record<Endpoint, number> = { product_info: 0.0015, products: 0.0015, amazon_products: 0.00225, organic: 0.0045, amazon_asin: 0.00225 }
 /** A Google Shopping SERP holds up to 40 results; products is billed per SERP. */
 export const SERP_SIZE = 40
 export const serpsFor = (depth: number) => Math.max(1, Math.ceil(depth / SERP_SIZE))
 const BATCH = 100
 
-type Endpoint = 'product_info' | 'products' | 'amazon_products' | 'organic'
+type Endpoint = 'product_info' | 'products' | 'amazon_products' | 'organic' | 'amazon_asin'
 /** API path and the request fields each endpoint needs on top of the job body. */
 const ENDPOINTS: Record<Endpoint, { path: string; extra: Record<string, unknown> }> = {
   product_info: { path: 'merchant/google/product_info', extra: { language_code: 'en' } },
@@ -43,6 +43,8 @@ const ENDPOINTS: Record<Endpoint, { path: string; extra: Record<string, unknown>
   amazon_products: { path: 'merchant/amazon/products', extra: { language_code: 'en_AU', se_domain: 'amazon.com.au' } },
   // Google organic: $0.003 per task as billed on this account (observed 22 Oct 2026; the guard adds 50%).
   organic: { path: 'serp/google/organic', extra: { language_code: 'en' } },
+  // One Amazon AU product page by ASIN: $0.0015 per task (amazon-import.ts pricing note).
+  amazon_asin: { path: 'merchant/amazon/asin', extra: { language_code: 'en_AU', se_domain: 'amazon.com.au' } },
 }
 
 export interface DfsPrice { current?: number | null; regular?: number | null; currency?: string | null; displayed_price?: string | null }
@@ -59,6 +61,7 @@ export interface DfsShoppingItem {
   shopping_url?: string | null; product_rating?: { value?: number | null } | null; reviews_count?: number | null
 }
 export interface DfsAmazonItem { type?: string; title?: string | null; url?: string | null; data_asin?: string | null; price_from?: number | null; currency?: string | null }
+export interface DfsAmazonProduct { type?: string; title?: string | null; data_asin?: string | null; price_from?: number | null; currency?: string | null; is_available?: boolean | null }
 export interface DfsOrganicItem { type?: string; title?: string | null; url?: string | null; domain?: string | null; description?: string | null }
 interface DfsTask<T> { id?: string; status_code?: number; status_message?: string; cost?: number; data?: { tag?: string }; result?: Array<{ items?: T[] | null }> | null }
 interface DfsEnvelope<T> { status_code?: number; status_message?: string; cost?: number; tasks?: DfsTask<T>[] }
@@ -144,6 +147,11 @@ export class DataForSeoClient {
   /** Google organic searches (e.g. `site:jbhifi.com.au Aqara Hub M3`), one 10-result SERP each. */
   async organicMany(jobs: Array<{ tag: string; keyword: string }>): Promise<Map<string, TaskOutcome<DfsOrganicItem[]>>> {
     return this.many<DfsOrganicItem>('organic', jobs.map((j) => ({ tag: j.tag, body: { keyword: j.keyword, depth: 10 } })))
+  }
+
+  /** Amazon AU product pages by ASIN; the tag is the caller's key. */
+  async amazonAsins(jobs: Array<{ tag: string; asin: string }>): Promise<Map<string, TaskOutcome<DfsAmazonProduct[]>>> {
+    return this.many<DfsAmazonProduct>('amazon_asin', jobs.map((j) => ({ tag: j.tag, body: { asin: j.asin } })))
   }
 
   private async many<T>(endpoint: Endpoint, jobs: Array<{ tag: string; body: Record<string, unknown> }>): Promise<Map<string, TaskOutcome<T[]>>> {

@@ -23,13 +23,13 @@ import { FILL_RETAILERS, hostAllowed, matchRetailer, resolveMerchants, retailerB
 import { DataForSeoClient, PUBLISHED_COST, SERP_SIZE, serpsFor, spec, type DfsAmazonItem, type DfsOrganicItem, type DfsProductInfo } from './lib/dataforseo'
 import { chooseLink, linkQuery, summariseLinks, type LinkResult } from './lib/link'
 import { findInCatalogue, normaliseGtin } from './lib/match'
-import { pickProductPage } from './lib/fill'
+import { amazonAsin, amazonOffersToCheck, pickProductPage } from './lib/fill'
 import { isSearchUrl, planProduct, productPriceAfter, summarise, type Change, type Observation, type ProductPlan } from './lib/plan'
 import { acquireLock, latestReport, renderMarkdown, saveReport, type CostEstimate, type FillCandidate, type RunReport, type SearchCandidate } from './lib/report'
-import { applyLinks, applyPlans, loadCatalogue, loadMerchants, type CatalogueProduct } from './lib/store'
+import { applyLinks, applyPlans, loadCatalogue, loadMerchants, recordLinkAttempts, type CatalogueProduct } from './lib/store'
 
 // ---------------------------------------------------------------- arguments
-const BOOLEAN_FLAGS = new Set(['write', 'drop-stale', 'help', 'inactive', 'all'])
+const BOOLEAN_FLAGS = new Set(['write', 'drop-stale', 'no-link', 'no-amazon', 'help', 'inactive', 'all'])
 function parseArgs(argv: string[]) {
   const positional: string[] = []
   const flags = new Map<string, string | true>()
@@ -62,8 +62,9 @@ const log = (msg: string) => console.error(msg)
 const USAGE = `Usage: prices.sh <command> [options]
 
   search "<query>" [--limit 10]               Google Shopping candidates (report only, never writes)
-  refresh [--product slug] [--limit N]         DataForSEO product_info by googleProductId
-          [--write] [--drop-stale] [--max-cost 1]
+  refresh [--product slug] [--limit N]         Google Shopping product_info by googleProductId; then link
+          [--write] [--drop-stale] [--max-cost 1] products without one (weekly retry) and check Amazon AU
+          [--no-link] [--no-amazon]            offers Google missed by ASIN
   link [--product slug] [--limit N]            Find the Google Shopping product id for products without one
           [--write] [--max-cost 1]             (--write sets googleProductId on MATCHED products only)
   fill [--product slug] [--retailer name]      Replace offers that link to a retailer SEARCH page with the
@@ -153,28 +154,49 @@ function missingMerchantWarnings(plans: ProductPlan[]): string[] {
 }
 
 // ---------------------------------------------------------------- refresh
+/** Days before `refresh` searches again for a product its link search did not match. */
+const LINK_RETRY_DAYS = 7
+const linkDue = (p: CatalogueProduct, now: Date) => {
+  const at = typeof p.sourceData.linkAttemptedAt === 'string' ? Date.parse(p.sourceData.linkAttemptedAt) : NaN
+  return !Number.isFinite(at) || now.getTime() - at >= LINK_RETRY_DAYS * 86_400_000
+}
+const hasAmazonAsin = (p: CatalogueProduct) => p.offers.some((o) => o.active && o.merchantName === 'Amazon AU' && amazonAsin(o.url))
+
+/**
+ * Daily price refresh, in budget order:
+ *   1. Google Shopping product_info for every product with a googleProductId (all AU retailers);
+ *   2. a `link` search for products without one (unmatched ones are retried weekly), so the
+ *      catalogue gains ids and is covered by step 1 from the next run;
+ *   3. Amazon AU offers that step 1 did not cover, by ASIN (merchant/amazon/asin), least
+ *      recently checked first, within what is left of --max-cost.
+ * --no-link / --no-amazon skip steps 2 / 3.
+ */
 async function refresh(payload: Payload, report: RunReport) {
   const maxCost = num('max-cost', 1)
   const merchants = await loadMerchants(payload)
   const catalogue = await loadCatalogue(payload, merchants)
   const { lookup } = resolveMerchants(merchants)
+  const now = new Date()
   const hasFixture = (p: CatalogueProduct) => !fixtureDir || fs.existsSync(path.join(fixtureDir, 'dataforseo', 'product_info', `${p.googleProductId}.json`))
-  const targets = selectProducts(catalogue, (p) => Boolean(p.googleProductId) && hasFixture(p), num('limit', 0))
-  if (str('product') && !targets[0].googleProductId) throw new Error(`${targets[0].slug} has no googleProductId; refresh looks products up by id`)
+  const targets = selectProducts(catalogue, (p) => (Boolean(p.googleProductId) && hasFixture(p)) || (!fixtureDir && hasAmazonAsin(p)), num('limit', 0))
+  if (str('product') && !targets[0].googleProductId && !hasAmazonAsin(targets[0])) throw new Error(`${targets[0].slug} has no googleProductId and no Amazon AU offer; nothing to refresh`)
   if (fixtureDir) report.warnings.push('Fixture mode: only products with a recorded product_info response are considered')
   if (scope() !== 'active') report.warnings.push(`Scope: ${scope()} products. Offers are added/updated as usual; product active flags are never changed.`)
+  const linked = targets.filter((p) => p.googleProductId)
   const dfs = dfsClient()
-  log(`refresh: ${targets.length} product(s), estimated $${dfs.estimate('product_info', targets.length).toFixed(4)} (budget $${maxCost})`)
-  const results = await dfs.productInfo(targets.map((p) => p.googleProductId!))
-  const now = new Date()
-  const plans: ProductPlan[] = []
+  log(`refresh: ${linked.length} product(s) by googleProductId, estimated $${dfs.estimate('product_info', linked.length).toFixed(4)} (budget $${maxCost})`)
+
+  // 1. Google Shopping
+  const results = await dfs.productInfo(linked.map((p) => p.googleProductId!))
+  const perProduct = new Map<string, { observations: Observation[]; skips: Change[]; note?: string; item: DfsProductInfo | null; gtinMismatch: boolean }>()
   for (const p of targets) {
-    const r = results.get(p.googleProductId!)
-    const item = r?.result ?? null
     let note: string | undefined
     let observations: Observation[] = [], skips: Change[] = []
     let gtinMismatch = false
-    if (!r) note = 'not looked up: --max-cost budget reached'
+    const r = p.googleProductId ? results.get(p.googleProductId) : undefined
+    const item = r?.result ?? null
+    if (!p.googleProductId) note = 'no googleProductId: Amazon AU offer checked by ASIN only'
+    else if (!r) note = 'not looked up: --max-cost budget reached'
     else if (!item) note = `no result (${r.error ?? 'empty'}); product left as it is`
     else if (p.gtin && normaliseGtin(spec(item, 'GTIN', 'EAN', 'UPC', 'GTIN-13')) && normaliseGtin(spec(item, 'GTIN', 'EAN', 'UPC', 'GTIN-13')) !== normaliseGtin(p.gtin)) {
       // The linked Google product states a different barcode: its sellers are not this product's.
@@ -183,16 +205,64 @@ async function refresh(payload: Payload, report: RunReport) {
     } else {
       const s = sellerObservations(item, lookup)
       observations = s.observations; skips = s.skips
-      if (!observations.length) note = 'no AU retailer offers in the result; nothing changed'
+      if (!observations.length) note = 'no AU retailer offers in the result'
       if (s.ignored.length) note = `${note ? `${note}. ` : ''}${s.ignored.length} non-AU/unlisted seller(s) ignored: ${s.ignored.slice(0, 6).join(', ')}${s.ignored.length > 6 ? ', …' : ''}`
     }
-    const plan = planProduct(p, observations, { now, checkStale: true, dropStale: flags.has('drop-stale') && Boolean(item), note })
-    plan.changes.push(...skips)
-    plan.observed = Boolean(item) && !gtinMismatch
+    perProduct.set(p.slug, { observations, skips, note, item, gtinMismatch })
+  }
+  if (dfs.skippedForBudget.length) report.warnings.push(`${dfs.skippedForBudget.length} product(s) not looked up on Google Shopping because of --max-cost $${maxCost}`)
+
+  // 2. Link products that have no googleProductId yet (weekly retry when unmatched).
+  if (!str('product') && !fixtureDir && !flags.has('no-link')) {
+    const due = catalogue.filter((p) => inScope(p) && !p.googleProductId && linkDue(p, now))
+    if (due.length) {
+      const skippedBefore = dfs.skippedForBudget.length
+      const linkResults = await searchLinks(dfs, catalogue, due, SERP_SIZE)
+      const s = summariseLinks(linkResults)
+      report.warnings.push(`link: ${due.length} product(s) without a googleProductId searched; ${s.matched} matched${write ? ' and linked (priced from the next run)' : ' (review only)'}, ${s.ambiguous} ambiguous, ${s.noMatch} no match${dfs.skippedForBudget.length > skippedBefore ? `, ${dfs.skippedForBudget.length - skippedBefore} not searched (budget)` : ''}. Unmatched products are searched again after ${LINK_RETRY_DAYS} days.`)
+      if (write) {
+        report.linkWritten = await applyLinks(payload, linkResults, now)
+        report.linkWritten.errors.push(...await recordLinkAttempts(payload, linkResults, now))
+      }
+    }
+  }
+
+  // 3. Amazon AU offers Google Shopping did not cover, by ASIN.
+  if (!flags.has('no-amazon') && !fixtureDir) {
+    const covered = (slug: string, offer: CatalogueProduct['offers'][number]) => {
+      const pp = perProduct.get(slug)
+      return Boolean(pp?.gtinMismatch) || Boolean(pp?.observations.some((o) => o.merchantId === offer.merchantId))
+    }
+    const todo = amazonOffersToCheck(targets, covered)
+    if (todo.length) {
+      const skippedBefore = dfs.skippedForBudget.length
+      log(`refresh: ${todo.length} Amazon AU offer(s) not in Google Shopping, by ASIN, estimated $${dfs.estimate('amazon_asin', todo.length).toFixed(4)} (left $${Math.max(0, maxCost - dfs.spent).toFixed(4)})`)
+      const asins = await dfs.amazonAsins(todo.map((t) => ({ tag: `${t.slug}~${t.offer.id}`, asin: t.asin })))
+      for (const t of todo) {
+        const pp = perProduct.get(t.slug)!
+        const r = asins.get(`${t.slug}~${t.offer.id}`)
+        if (!r) continue // over budget: least recently checked first, so the next run picks it up
+        const info = (r.result ?? []).find((i) => i.type === 'amazon_product_info') ?? null
+        const price = info && typeof info.price_from === 'number' && info.price_from > 0 && (!info.currency || info.currency === 'AUD') ? info.price_from : null
+        if (!info) pp.skips.push({ kind: 'skip', retailer: 'Amazon AU', reason: `ASIN ${t.asin}: ${r.error ?? 'no product data'}` })
+        else if (info.is_available === false) pp.skips.push({ kind: 'skip', retailer: 'Amazon AU', reason: `ASIN ${t.asin} is unavailable on Amazon AU; offer left as it is` })
+        else if (price == null) pp.skips.push({ kind: 'skip', retailer: 'Amazon AU', reason: `ASIN ${t.asin}: no AUD price` })
+        else pp.observations.push({ retailer: 'Amazon AU', merchantId: t.offer.merchantId, offerId: t.offer.id, price, url: t.offer.url, source: 'dataforseo', kind: 'price', sellerTitle: info.title ?? undefined })
+      }
+      const notChecked = dfs.skippedForBudget.length - skippedBefore
+      if (notChecked) report.warnings.push(`${notChecked} of ${todo.length} Amazon AU offer(s) not checked by ASIN because of --max-cost $${maxCost} (least recently checked go first next run)`)
+    }
+  }
+
+  const plans: ProductPlan[] = []
+  for (const p of targets) {
+    const pp = perProduct.get(p.slug)!
+    const plan = planProduct(p, pp.observations, { now, checkStale: true, dropStale: flags.has('drop-stale') && Boolean(pp.item), note: pp.note })
+    plan.changes.push(...pp.skips)
+    plan.observed = (Boolean(pp.item) && !pp.gtinMismatch) || pp.observations.length > 0
     plans.push(plan)
   }
   report.cost.dataforseo = dfsCost(dfs, maxCost)
-  if (dfs.skippedForBudget.length) report.warnings.push(`${dfs.skippedForBudget.length} product(s) not looked up because of --max-cost $${maxCost}`)
   report.warnings.push(...missingMerchantWarnings(plans))
   report.plans = plans
   report.summary = summarise(plans)
@@ -200,32 +270,9 @@ async function refresh(payload: Payload, report: RunReport) {
 }
 
 // ---------------------------------------------------------------- link
-async function link(payload: Payload, report: RunReport) {
-  const maxCost = num('max-cost', 1)
-  const depth = num('depth', SERP_SIZE)
-  const merchants = await loadMerchants(payload)
-  const catalogue = await loadCatalogue(payload, merchants)
-  const hasFixture = (p: CatalogueProduct) => !fixtureDir || fs.existsSync(path.join(fixtureDir, 'dataforseo', 'products', `${p.slug}.json`))
-  const targets = selectProducts(catalogue, (p) => !p.googleProductId && hasFixture(p), num('limit', 0))
-  if (str('product') && targets[0].googleProductId) throw new Error(`${targets[0].slug} already has googleProductId ${targets[0].googleProductId}; link only fills missing ids`)
-  if (fixtureDir) report.warnings.push('Fixture mode: only products with a recorded Shopping search (dataforseo/products/<slug>.json) are considered')
-  const scopeCount = catalogue.filter((p) => inScope(p) && !p.googleProductId).length
+/** Google Shopping searches for products without a googleProductId, and the match decision for each. */
+async function searchLinks(dfs: DataForSeoClient, catalogue: CatalogueProduct[], targets: CatalogueProduct[], depth: number): Promise<LinkResult[]> {
   const linkedIds = new Map(catalogue.filter((p) => p.googleProductId).map((p) => [p.googleProductId!, p.slug]))
-
-  const dfs = dfsClient()
-  const serps = serpsFor(depth)
-  const searchUsd = targets.length * serps * PUBLISHED_COST.products
-  const infoUsd = targets.length * PUBLISHED_COST.product_info
-  const perProduct = serps * PUBLISHED_COST.products + PUBLISHED_COST.product_info
-  const estimate: CostEstimate = {
-    products: targets.length, searches: targets.length, serpsPerSearch: serps, searchUsd, productInfoUsdMax: infoUsd, totalUsdMax: searchUsd + infoUsd,
-    guardUsd: dfs.estimate('products', targets.length, serps), scopeProducts: scopeCount, scopeTotalUsdMax: scopeCount * perProduct,
-    basis: `DataForSEO Standard queue: Products $${PUBLISHED_COST.products}/SERP of ${SERP_SIZE} results, Product Info $${PUBLISHED_COST.product_info}/product (dataforseo.com/pricing, checked 2026-10-17)`,
-  }
-  log(`link: ${targets.length} product(s) without a googleProductId (${scope()} scope; ${scopeCount} in the whole scope)`)
-  log(`  cost estimate: ${targets.length} search(es) x ${serps} SERP = $${searchUsd.toFixed(4)} now; the follow-up refresh adds up to $${infoUsd.toFixed(4)} of product_info; total up to $${estimate.totalUsdMax.toFixed(4)}`)
-  log(`  whole scope (${scopeCount} product(s)): up to $${estimate.scopeTotalUsdMax.toFixed(4)}; budget guard for this run $${estimate.guardUsd.toFixed(4)} of --max-cost $${maxCost}`)
-
   const jobs = targets.map((p) => ({ tag: p.slug, keyword: linkQuery(p) }))
   const found = targets.length ? await dfs.productsMany(jobs, depth) : new Map()
   const results: LinkResult[] = targets.map((p, i) => {
@@ -242,6 +289,35 @@ async function link(payload: Payload, report: RunReport) {
     if (list.length < 2) continue
     for (const r of list) { r.status = 'ambiguous'; r.reason = `Google product ${id} also matched ${list.filter((x) => x !== r).map((x) => x.slug).join(', ')} in this run` }
   }
+  return results
+}
+
+async function link(payload: Payload, report: RunReport) {
+  const maxCost = num('max-cost', 1)
+  const depth = num('depth', SERP_SIZE)
+  const merchants = await loadMerchants(payload)
+  const catalogue = await loadCatalogue(payload, merchants)
+  const hasFixture = (p: CatalogueProduct) => !fixtureDir || fs.existsSync(path.join(fixtureDir, 'dataforseo', 'products', `${p.slug}.json`))
+  const targets = selectProducts(catalogue, (p) => !p.googleProductId && hasFixture(p), num('limit', 0))
+  if (str('product') && targets[0].googleProductId) throw new Error(`${targets[0].slug} already has googleProductId ${targets[0].googleProductId}; link only fills missing ids`)
+  if (fixtureDir) report.warnings.push('Fixture mode: only products with a recorded Shopping search (dataforseo/products/<slug>.json) are considered')
+  const scopeCount = catalogue.filter((p) => inScope(p) && !p.googleProductId).length
+
+  const dfs = dfsClient()
+  const serps = serpsFor(depth)
+  const searchUsd = targets.length * serps * PUBLISHED_COST.products
+  const infoUsd = targets.length * PUBLISHED_COST.product_info
+  const perProduct = serps * PUBLISHED_COST.products + PUBLISHED_COST.product_info
+  const estimate: CostEstimate = {
+    products: targets.length, searches: targets.length, serpsPerSearch: serps, searchUsd, productInfoUsdMax: infoUsd, totalUsdMax: searchUsd + infoUsd,
+    guardUsd: dfs.estimate('products', targets.length, serps), scopeProducts: scopeCount, scopeTotalUsdMax: scopeCount * perProduct,
+    basis: `DataForSEO Standard queue: Products $${PUBLISHED_COST.products}/SERP of ${SERP_SIZE} results, Product Info $${PUBLISHED_COST.product_info}/product (dataforseo.com/pricing, checked 2026-10-17)`,
+  }
+  log(`link: ${targets.length} product(s) without a googleProductId (${scope()} scope; ${scopeCount} in the whole scope)`)
+  log(`  cost estimate: ${targets.length} search(es) x ${serps} SERP = $${searchUsd.toFixed(4)} now; the follow-up refresh adds up to $${infoUsd.toFixed(4)} of product_info; total up to $${estimate.totalUsdMax.toFixed(4)}`)
+  log(`  whole scope (${scopeCount} product(s)): up to $${estimate.scopeTotalUsdMax.toFixed(4)}; budget guard for this run $${estimate.guardUsd.toFixed(4)} of --max-cost $${maxCost}`)
+
+  const results = await searchLinks(dfs, catalogue, targets, depth)
 
   report.cost.dataforseo = dfsCost(dfs, maxCost)
   if (dfs.skippedForBudget.length) report.warnings.push(`${dfs.skippedForBudget.length} product(s) not searched because of --max-cost $${maxCost}`)

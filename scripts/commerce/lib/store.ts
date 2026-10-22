@@ -172,6 +172,26 @@ export async function applyPlans(payload: Payload, plans: ProductPlan[], catalog
 export interface LinkWriteResult { linked: number; errors: string[] }
 
 /**
+ * Records sourceData.linkAttemptedAt on products a `refresh` link search did not match, so
+ * the daily refresh retries them weekly instead of paying for the same search every day.
+ */
+export async function recordLinkAttempts(payload: Payload, results: LinkResult[], now: Date): Promise<string[]> {
+  const errors: string[] = []
+  for (const r of results) {
+    if (r.status === 'matched' || r.status === 'not-searched' || r.status === 'error') continue
+    try {
+      const fresh = await payload.findByID({ collection: 'products', id: r.productId, depth: 0, overrideAccess: true })
+      const sourceData = mergeSourceData(fresh.sourceData, { linkAttemptedAt: now.toISOString(), linkAttemptStatus: r.status })
+      if (!sourceData) { errors.push(`${r.slug}: product sourceData is not an object; attempt not recorded`); continue }
+      await payload.update({ collection: 'products', id: r.productId, data: { sourceData }, depth: 0, overrideAccess: true, context })
+    } catch (e) {
+      errors.push(`${r.slug} link attempt: ${(e as Error).message}`)
+    }
+  }
+  return errors
+}
+
+/**
  * Writes googleProductId (and sourceData.googleLink, merged into the existing sourceData) for
  * MATCHED link results only. Nothing else on the product is sent. A product that gained a
  * googleProductId since it was read is left alone.
