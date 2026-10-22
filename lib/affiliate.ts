@@ -66,6 +66,32 @@ export function affiliateUrl(rawUrl: string, options: AffiliateOptions = {}): st
   return `${GENIUSLINK_BASE}/Proxy.ashx?TSID=${GENIUSLINK_TSID}&GR_URL=${encodeURIComponent(rawUrl)}${GENIUSLINK_DTB ? '&dtb=1' : ''}`;
 }
 
+const A_TAG = /<a\b[^>]*>/gi;
+const HREF_ATTR = /\shref\s*=\s*(["'])(.*?)\1/i;
+const REL_TARGET_ATTR = /\s(?:rel|target)\s*=\s*(["']).*?\1/gi;
+
+/**
+ * affiliateUrl() for every link in an HTML fragment: article bodies, product
+ * descriptions, research notes and CMS pages carry hand-written Amazon/eBay
+ * links that never pass through AffiliateLink. Each one rewritten gets the
+ * same target/rel as a buy button; every other link is left as it is, for
+ * Sovrn to affiliate in the browser.
+ */
+export function affiliateHtmlLinks(html: string): string {
+  if (!GENIUSLINK_ENABLED || !html) return html;
+  return html.replace(A_TAG, (tag) => {
+    const m = tag.match(HREF_ATTR);
+    if (!m) return tag;
+    const raw = m[2].replace(/&amp;/g, '&');
+    const out = affiliateUrl(raw);
+    if (out === raw) return tag;
+    return tag
+      .replace(m[0], ` href="${out.replace(/&/g, '&amp;')}"`)
+      .replace(REL_TARGET_ATTR, '')
+      .replace(/^<a\b/i, `<a target="${affiliateLinkAttrs.target}" rel="${affiliateLinkAttrs.rel}"`);
+  });
+}
+
 /**
  * Which networks are live. Surfaced on /affiliate-disclosure/ so the disclosure page
  * always matches reality instead of drifting out of date.

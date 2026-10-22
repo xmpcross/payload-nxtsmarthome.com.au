@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
-import { AFFILIATE_ENABLED } from '@/lib/affiliate';
+import { AFFILIATE_ENABLED, affiliateHtmlLinks } from '@/lib/affiliate';
 import { bulletsOf } from '@/lib/bullets';
 import { featureItems, isFeatureSpec } from '@/lib/feature-specs';
 import { splitDescriptionFaqs } from '@/lib/description-faq';
@@ -106,7 +106,9 @@ export default function ProductAccordion({
   const retailerNames = (product.retailers || []).map((r) => r.name);
   // The description's FAQ section is lifted out of the Description panel and
   // shown under the last row (Additional Info) instead (user request, 24 Sep 2026).
-  const descriptionFaqs = product.cmsDescriptionHtml ? splitDescriptionFaqs(product.cmsDescriptionHtml).faqs : [];
+  // Amazon/eBay links written into the CMS description go through Geniuslink too.
+  const descriptionHtml = affiliateHtmlLinks(product.cmsDescriptionHtml ?? '');
+  const descriptionFaqs = descriptionHtml ? splitDescriptionFaqs(descriptionHtml).faqs : [];
 
   /*
    * Manufacturer specs carry the page. Only two derived rows are worth keeping
@@ -173,7 +175,7 @@ export default function ProductAccordion({
               prose-sm gives the headings and paragraphs inside it spacing —
               the markup arrives as real HTML, not text.
             */
-            <DescriptionWithFaqs html={product.cmsDescriptionHtml} />
+            <DescriptionWithFaqs html={descriptionHtml} />
           ) : product.shortDescription && bulletsOf(product.shortDescription).length > 1 ? (
             /* Bulleted copy becomes a real list — as a paragraph the "•"
                characters print as text. */

@@ -12,6 +12,7 @@ import { categories, getCategoryByKey, type Category } from './site';
 import { editorialHits, guardMode, postTexts } from './editorial-guard.mjs';
 import { mergedSlugTargets } from './merged-articles.mjs';
 import { articleHref } from './urls';
+import { affiliateHtmlLinks } from './affiliate';
 
 
 /** The kinds of article this site publishes. Drives the badge and the JSON-LD type. */
@@ -249,7 +250,7 @@ async function renderMarkdown(markdown: string): Promise<string> {
     .use(rehypeAutolinkHeadings, { behavior: 'wrap' })
     .use(rehypeStringify, { allowDangerousHtml: true })
     .process(markdown);
-  return String(file);
+  return affiliateHtmlLinks(String(file));
 }
 
 /**

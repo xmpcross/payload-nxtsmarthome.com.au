@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import remarkRehype from 'remark-rehype';
 import rehypeStringify from 'rehype-stringify';
 import type { Product } from '@/lib/products';
+import { affiliateHtmlLinks } from '@/lib/affiliate';
 
 /**
  * The curated editorial for a product (Payload Editorial fields, originally
@@ -22,7 +23,10 @@ import type { Product } from '@/lib/products';
 async function markdownToHtml(md: string): Promise<string> {
   const file = await unified().use(remarkParse).use(remarkGfm).use(remarkRehype).use(rehypeStringify).process(md);
   // Source links leave the site: open them in a new tab, no referrer.
-  return String(file).replace(/<a href="(https?:\/\/[^"]+)">/g, '<a href="$1" target="_blank" rel="noopener noreferrer nofollow">');
+  // Amazon/eBay links then go through Geniuslink, with the buy-button rel.
+  return affiliateHtmlLinks(
+    String(file).replace(/<a href="(https?:\/\/[^"]+)">/g, '<a href="$1" target="_blank" rel="noopener noreferrer nofollow">'),
+  );
 }
 
 const PROSE =
