@@ -6,31 +6,30 @@
  *   prices.sh search "<query>" [--limit 10] [--max-cost 1]
  *   prices.sh refresh [--product <slug>] [--limit N] [--write] [--drop-stale] [--max-cost 1]
  *   prices.sh link [--inactive|--all] [--product <slug>] [--limit N] [--write] [--max-cost 1]
- *   prices.sh zenrows [--product <slug>] [--retailer "JB Hi-Fi"] [--verify|--fill] [--limit N] [--write] [--max-requests 50]
+ *   prices.sh fill [--product <slug>] [--retailer "JB Hi-Fi"] [--limit N] [--write] [--max-cost 1]
  *   prices.sh report
  *
- * refresh / link / zenrows consider active products by default; --inactive selects only
+ * refresh / link / fill consider active products by default; --inactive selects only
  * products with active = false and --all selects both.
  *
  * Global: --fixture <dir> reads recorded API responses from disk instead of calling
- * DataForSEO / ZenRows (Payload is still read). --write is refused in fixture mode.
+ * DataForSEO (Payload is still read). --write is refused in fixture mode.
  * See scripts/commerce/README.md.
  */
 import fs from 'node:fs'
 import path from 'node:path'
 import type { Payload } from 'payload'
-import { ZENROWS_RETAILERS, hostAllowed, matchRetailer, resolveMerchants, retailerByName, retailerByUrl, type AuRetailer, type MerchantRef } from './lib/au-retailers'
-import { DataForSeoClient, PUBLISHED_COST, SERP_SIZE, serpsFor, spec, type DfsProductInfo } from './lib/dataforseo'
-import { extractPrice, extractSearchResults } from './lib/extract-price'
+import { FILL_RETAILERS, hostAllowed, matchRetailer, resolveMerchants, retailerByName, retailerByUrl, type AuRetailer, type MerchantRef } from './lib/au-retailers'
+import { DataForSeoClient, PUBLISHED_COST, SERP_SIZE, serpsFor, spec, type DfsAmazonItem, type DfsOrganicItem, type DfsProductInfo } from './lib/dataforseo'
 import { chooseLink, linkQuery, summariseLinks, type LinkResult } from './lib/link'
-import { distinctiveModelTokens, findInCatalogue, identityMatch, normaliseGtin } from './lib/match'
-import { isSearchUrl, planProduct, summarise, type Change, type Observation, type ProductPlan } from './lib/plan'
+import { findInCatalogue, normaliseGtin } from './lib/match'
+import { pickProductPage } from './lib/fill'
+import { isSearchUrl, planProduct, productPriceAfter, summarise, type Change, type Observation, type ProductPlan } from './lib/plan'
 import { acquireLock, latestReport, renderMarkdown, saveReport, type CostEstimate, type FillCandidate, type RunReport, type SearchCandidate } from './lib/report'
 import { applyLinks, applyPlans, loadCatalogue, loadMerchants, type CatalogueProduct } from './lib/store'
-import { RequestBudgetExceeded, ZenRowsClient } from './lib/zenrows'
 
 // ---------------------------------------------------------------- arguments
-const BOOLEAN_FLAGS = new Set(['write', 'drop-stale', 'verify', 'fill', 'search-only', 'help', 'inactive', 'all'])
+const BOOLEAN_FLAGS = new Set(['write', 'drop-stale', 'help', 'inactive', 'all'])
 function parseArgs(argv: string[]) {
   const positional: string[] = []
   const flags = new Map<string, string | true>()
@@ -67,20 +66,19 @@ const USAGE = `Usage: prices.sh <command> [options]
           [--write] [--drop-stale] [--max-cost 1]
   link [--product slug] [--limit N]            Find the Google Shopping product id for products without one
           [--write] [--max-cost 1]             (--write sets googleProductId on MATCHED products only)
-  zenrows [--product slug] [--retailer name]   Verify offer prices on retailer pages (--verify, default)
-          [--verify] [--fill] [--limit N]      and/or fill missing supported retailers (--fill)
-          [--search-only]                      with --fill: only offers that are a retailer search page
-          [--write] [--max-requests 50]
+  fill [--product slug] [--retailer name]      Replace offers that link to a retailer SEARCH page with the
+          [--limit N] [--write] [--max-cost 1] product page: Amazon via DataForSEO Amazon search, other
+                                               retailers via a Google site: search (no price change)
   report                                       Show the last saved run report
 
-  --inactive        refresh/link/zenrows: only products with active = false (default: active only)
-  --all             refresh/link/zenrows: active and inactive products
+  --inactive        refresh/link/fill: only products with active = false (default: active only)
+  --all             refresh/link/fill: active and inactive products
   --fixture <dir>   read recorded API responses from <dir> (offline; --write refused)
   --timeout-min N   DataForSEO task polling timeout (default 25)
 Reports: app/scratch/price-runs/. Nothing is saved to Payload without --write.`
 
 // ---------------------------------------------------------------- helpers
-interface Manifest { note?: string; zenrows?: Record<string, string> }
+interface Manifest { note?: string }
 function readManifest(): Manifest {
   if (!fixtureDir) return {}
   const file = path.join(fixtureDir, 'manifest.json')
@@ -251,117 +249,73 @@ async function link(payload: Payload, report: RunReport) {
   report.link = { summary: summariseLinks(results), estimate, results }
 }
 
-// ---------------------------------------------------------------- zenrows
-async function zenrows(payload: Payload, report: RunReport, manifest: Manifest) {
-  const doVerify = flags.has('verify') || !flags.has('fill')
-  const doFill = flags.has('fill')
-  const maxRequests = num('max-requests', 50)
-  let retailers = ZENROWS_RETAILERS
-  const wanted = str('retailer')
-  if (wanted) {
-    const r = retailerByName(wanted)
-    if (!r?.zenrows) throw new Error(`--retailer "${wanted}" is not supported. Supported: ${ZENROWS_RETAILERS.map((x) => x.name).join(', ')}`)
-    retailers = [r]
+// ---------------------------------------------------------------- fill
+/** Offers that link to a retailer search page and a retailer `fill` can resolve. */
+function fillableOffers(p: CatalogueProduct, only?: AuRetailer) {
+  const out: Array<{ offer: CatalogueProduct['offers'][number]; retailer: AuRetailer }> = []
+  const seen = new Set<string>()
+  for (const offer of p.offers) {
+    if (!offer.active || !isSearchUrl(offer.url)) continue
+    const retailer = retailerByName(offer.merchantName) ?? retailerByUrl(offer.url)
+    if (!retailer?.productPath || (only && retailer !== only) || seen.has(retailer.name)) continue
+    seen.add(retailer.name)
+    out.push({ offer, retailer })
   }
-  const supported = new Set(retailers.map((r) => r.name))
-  const merchants = await loadMerchants(payload)
-  const catalogue = await loadCatalogue(payload, merchants)
-  const { lookup } = resolveMerchants(merchants)
-  const fixtureSlugs = new Set(Object.keys(manifest.zenrows ?? {}).map((k) => k.split(':').slice(2).join(':')))
-  const targets = selectProducts(catalogue, (p) => !fixtureDir || fixtureSlugs.has(p.slug), num('limit', 10))
-  if (fixtureDir) report.warnings.push('Fixture mode: only products with recorded ZenRows pages are considered')
-  const zr = new ZenRowsClient({ apiKey: process.env.ZENROWS_API_KEY, maxRequests, concurrency: num('concurrency', 3), fixtureDir: fixtureDir ?? undefined, fixtureMap: manifest.zenrows, log })
-  log(`zenrows: ${targets.length} product(s), ${[doVerify && 'verify', doFill && 'fill'].filter(Boolean).join(' + ')}, retailers: ${[...supported].join(', ')}, max ${maxRequests} request(s)`)
-  const now = new Date()
-  const plans: ProductPlan[] = []
-  const fillCandidates: FillCandidate[] = []
-  let budgetHit = false
-  const unchecked: string[] = []
-
-  const guarded = async <T>(label: string, fn: () => Promise<T>): Promise<T | null> => {
-    if (budgetHit) { unchecked.push(label); return null }
-    try { return await fn() } catch (e) {
-      if (e instanceof RequestBudgetExceeded) { budgetHit = true; unchecked.push(label); return null }
-      throw e
-    }
-  }
-
-  for (const p of targets) {
-    const observations: Observation[] = []
-    const skips: Change[] = []
-    const jobs: Promise<unknown>[] = []
-
-    if (doVerify) {
-      for (const offer of p.offers) {
-        // A search-results page has no single price to verify; --fill handles those offers.
-        if (!offer.active || !/^https?:\/\//i.test(offer.url) || isSearchUrl(offer.url)) continue
-        const retailer = retailerByName(offer.merchantName) ?? retailerByUrl(offer.url)
-        if (!retailer?.zenrows || !supported.has(retailer.name)) continue
-        if (!hostAllowed(retailer, offer.url)) { skips.push({ kind: 'skip', retailer: retailer.name, reason: `offer #${offer.id} URL is not on the ${retailer.name} host allow-list`, url: offer.url }); continue }
-        jobs.push(guarded(`verify ${p.slug} @ ${retailer.name}`, async () => {
-          const res = await zr.fetchHtml(offer.url, { jsRender: retailer.zenrows!.jsRender, fixtureKey: `product:${retailer.name}:${p.slug}` })
-          if (!res.ok) { skips.push({ kind: 'skip', retailer: retailer.name, reason: `page fetch failed: ${res.error}`, url: offer.url }); return }
-          const x = extractPrice(res.html, retailer.name)
-          if (x.price == null) { skips.push({ kind: 'skip', retailer: retailer.name, reason: `no price on page: ${x.reason}`, url: offer.url }); return }
-          observations.push({ retailer: retailer.name, merchantId: offer.merchantId, offerId: offer.id, price: x.price, url: offer.url, source: 'zenrows', kind: 'verify', availability: x.availability })
-        }))
-      }
-    }
-
-    if (doFill) {
-      for (const retailer of retailers) {
-        const merchant = lookup.get(retailer.name)
-        if (!merchant) { skips.push({ kind: 'skip', retailer: retailer.name, reason: 'no Merchant record in Payload (not created)' }); continue }
-        // A retailer whose only offer is a search-results page is a gap too: a match
-        // becomes an UPDATE with the direct URL (planProduct). Inactive offers still block.
-        if (p.offers.some((o) => o.merchantId === merchant.id && (!o.active || !isSearchUrl(o.url)))) continue
-        // --search-only: only replace search-page offers; spend nothing on retailers with no offer.
-        if (flags.has('search-only') && !p.offers.some((o) => o.merchantId === merchant.id)) continue
-        jobs.push(guarded(`fill ${p.slug} @ ${retailer.name}`, () => fillOne(p, retailer, merchant, zr, observations, skips, fillCandidates)))
-      }
-    }
-
-    await Promise.all(jobs)
-    const plan = planProduct(p, observations, { now, checkStale: false })
-    plan.changes.push(...skips)
-    plans.push(plan)
-  }
-
-  report.cost.zenrows = { requests: zr.requests, credits: zr.credits, failures: zr.failures, maxRequests, simulated: zr.simulated }
-  if (budgetHit) report.warnings.push(`--max-requests ${maxRequests} reached; not checked: ${unchecked.join('; ')}`)
-  report.warnings.push(...missingMerchantWarnings(plans))
-  report.plans = plans
-  report.fillCandidates = fillCandidates
-  report.summary = summarise(plans)
-  if (write) report.written = await applyPlans(payload, plans, catalogue, now)
+  return out
 }
 
-/** Search one retailer for a product; propose an offer only on a confirmed brand+model or GTIN match. */
-async function fillOne(p: CatalogueProduct, retailer: AuRetailer, merchant: MerchantRef, zr: ZenRowsClient,
-  observations: Observation[], skips: Change[], candidates: FillCandidate[]) {
-  const z = retailer.zenrows!
-  const query = `${p.brand ?? ''} ${p.name}`.trim()
-  const searchUrl = z.search(query)
-  const res = await zr.fetchHtml(searchUrl, { jsRender: z.jsRender, waitMs: z.searchWaitMs, fixtureKey: `search:${retailer.name}:${p.slug}` })
-  if (!res.ok) { skips.push({ kind: 'skip', retailer: retailer.name, reason: `search fetch failed: ${res.error}` }); return }
-  const results = extractSearchResults(res.html, searchUrl, z.productPath, 8)
-  if (!results.length) { skips.push({ kind: 'skip', retailer: retailer.name, reason: 'search page had no product results' }); return }
-  // Spec-like tokens ("2nd", "128gb", "4k") are not identity: "Apple ... 2nd Generation" matched an Apple Pencil.
-  const models = distinctiveModelTokens(p.name)
-  const scored = results.map((r) => ({ ...r, id: identityMatch({ brand: p.brand, name: p.name, gtin: p.gtin }, { title: r.title }, { models }) }))
-  const hit = scored.find((r) => r.id.match)
-  if (!hit) {
-    for (const r of scored.slice(0, 3)) candidates.push({ product: p.slug, retailer: retailer.name, title: r.title, url: r.url, reason: r.id.reason })
-    return
+async function fill(payload: Payload, report: RunReport) {
+  const maxCost = num('max-cost', 1)
+  const wanted = str('retailer')
+  const only = wanted ? retailerByName(wanted) : undefined
+  if (wanted && !only?.productPath) throw new Error(`--retailer "${wanted}" is not supported. Supported: ${FILL_RETAILERS.map((r) => r.name).join(', ')}`)
+  const merchants = await loadMerchants(payload)
+  const catalogue = await loadCatalogue(payload, merchants)
+  const targets = selectProducts(catalogue, (p) => fillableOffers(p, only).length > 0, num('limit', 0))
+  const work = targets.flatMap((p) => fillableOffers(p, only).map((w) => ({ p, ...w, tag: `${p.slug}~${w.offer.id}`, query: `${p.brand ?? ''} ${p.name}`.replace(/\s+/g, ' ').trim() })))
+  const amazon = work.filter((w) => w.retailer.name === 'Amazon AU')
+  const google = work.filter((w) => w.retailer.name !== 'Amazon AU')
+
+  const dfs = dfsClient()
+  log(`fill: ${work.length} search-page offer(s) on ${targets.length} product(s): ${amazon.length} Amazon search(es), ${google.length} Google site: search(es); estimated $${(dfs.estimate('amazon_products', amazon.length) + dfs.estimate('organic', google.length)).toFixed(4)} (budget $${maxCost})`)
+  const amazonResults = amazon.length ? await dfs.amazonMany(amazon.map((w) => ({ tag: w.tag, keyword: w.query }))) : new Map()
+  const googleResults = google.length ? await dfs.organicMany(google.map((w) => ({ tag: w.tag, keyword: `site:${w.retailer.hosts[0]} ${w.query}` }))) : new Map()
+
+  const now = new Date()
+  const candidates: FillCandidate[] = []
+  const plans: ProductPlan[] = []
+  for (const p of targets) {
+    const changes: Change[] = []
+    for (const w of work.filter((x) => x.p === p)) {
+      const isAmazon = w.retailer.name === 'Amazon AU'
+      const r = (isAmazon ? amazonResults : googleResults).get(w.tag)
+      if (!r) { changes.push({ kind: 'skip', retailer: w.retailer.name, reason: 'not searched: --max-cost budget reached' }); continue }
+      if (!r.result) { changes.push({ kind: 'skip', retailer: w.retailer.name, reason: `search failed: ${r.error ?? 'no result'}` }); continue }
+      const { hit, options: found } = pickProductPage({ brand: p.brand, name: p.name, gtin: p.gtin }, w.retailer, r.result as Array<DfsAmazonItem | DfsOrganicItem>, isAmazon)
+      if (!hit) {
+        if (!found.length) changes.push({ kind: 'skip', retailer: w.retailer.name, reason: 'no product page in the results' })
+        for (const f of found.slice(0, 3)) candidates.push({ product: p.slug, retailer: w.retailer.name, title: f.title, url: f.url, reason: f.id.reason, price: f.price })
+        continue
+      }
+      const old = w.offer.priceAud
+      // A price only comes with Amazon results. Beyond x1.5 of the offer's price the page may be a
+      // different pack or bundle, so nothing is changed (URL included): review it by hand.
+      if (hit.price != null && typeof old === 'number' && old > 0 && (hit.price / old > 1.5 || hit.price / old < 1 / 1.5)) {
+        changes.push({ kind: 'hold', offerId: w.offer.id, retailer: w.retailer.name, oldPrice: old, newPrice: hit.price, ratio: Math.round((hit.price / old) * 100) / 100, source: 'dataforseo', url: hit.url,
+          note: `"${hit.title.slice(0, 80)}" priced x${Math.round((hit.price / old) * 100) / 100} the offer; may be another pack size, left as it is` })
+        continue
+      }
+      changes.push({ kind: 'update', offerId: w.offer.id, retailer: w.retailer.name, oldPrice: old ?? null, newPrice: hit.price ?? old ?? null,
+        newUrl: hit.url, source: 'dataforseo', verify: false, sellerTitle: hit.title })
+    }
+    plans.push({ productId: p.id, slug: p.slug, name: p.name, observed: false, oldPriceAud: p.priceAud ?? null, newPriceAud: productPriceAfter(p, changes), changes })
   }
-  const page = await zr.fetchHtml(hit.url, { jsRender: z.jsRender, fixtureKey: `product:${retailer.name}:${p.slug}` })
-  if (!page.ok) { candidates.push({ product: p.slug, retailer: retailer.name, title: hit.title, url: hit.url, reason: `title matched (${hit.id.reason}) but product page fetch failed: ${page.error}` }); return }
-  const x = extractPrice(page.html, retailer.name)
-  // The product page has the final say on identity when it states a GTIN.
-  const pageId = x.gtin && p.gtin ? identityMatch({ brand: p.brand, name: p.name, gtin: p.gtin }, { title: x.title ?? hit.title, gtin: x.gtin }, { models }) : hit.id
-  if (!pageId.match) { candidates.push({ product: p.slug, retailer: retailer.name, title: x.title ?? hit.title, url: hit.url, reason: pageId.reason, price: x.price }); return }
-  if (x.price == null) { candidates.push({ product: p.slug, retailer: retailer.name, title: hit.title, url: hit.url, reason: `matched (${pageId.reason}) but no price on page: ${x.reason}` }); return }
-  observations.push({ retailer: retailer.name, merchantId: merchant.id, price: x.price, url: hit.url, source: 'zenrows', kind: 'price', sellerTitle: x.title ?? hit.title, availability: x.availability })
+  report.cost.dataforseo = dfsCost(dfs, maxCost)
+  if (dfs.skippedForBudget.length) report.warnings.push(`${dfs.skippedForBudget.length} search(es) not posted because of --max-cost $${maxCost}`)
+  report.plans = plans
+  report.fillCandidates = candidates
+  report.summary = summarise(plans)
+  if (write) report.written = await applyPlans(payload, plans, catalogue, now)
 }
 
 // ---------------------------------------------------------------- search
@@ -415,7 +369,7 @@ async function search(payload: Payload, report: RunReport) {
 
 // ---------------------------------------------------------------- main
 async function main(): Promise<number> {
-  if (!command || flags.has('help') || !['search', 'refresh', 'link', 'zenrows', 'report'].includes(command)) {
+  if (!command || flags.has('help') || !['search', 'refresh', 'link', 'fill', 'report'].includes(command)) {
     console.log(USAGE)
     return command && !flags.has('help') ? 1 : 0
   }
@@ -428,12 +382,10 @@ async function main(): Promise<number> {
   }
   if (write && fixtureDir) throw new Error('--write is refused in --fixture mode: fixture data is synthetic and must never reach Payload')
   if (!fixtureDir) {
-    if ((command === 'refresh' || command === 'search' || command === 'link') && (!process.env.DATAFORSEO_LOGIN || !process.env.DATAFORSEO_PASSWORD))
+    if (!process.env.DATAFORSEO_LOGIN || !process.env.DATAFORSEO_PASSWORD)
       throw new Error('DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD are not set in app/.env.local (or run with --fixture <dir>)')
-    if (command === 'zenrows' && !process.env.ZENROWS_API_KEY)
-      throw new Error('ZENROWS_API_KEY is not set in app/.env.local (or run with --fixture <dir>)')
   }
-  const manifest = readManifest()
+  readManifest() // validates --fixture <dir>
   const release = acquireLock(command)
   const report = newReport(command)
   let payload: Payload | null = null
@@ -443,7 +395,7 @@ async function main(): Promise<number> {
     const config = (await import('../../payload.config')).default
     payload = await getPayload({ config })
     if (command === 'refresh') await refresh(payload, report)
-    else if (command === 'zenrows') await zenrows(payload, report, manifest)
+    else if (command === 'fill') await fill(payload, report)
     else if (command === 'link') await link(payload, report)
     else await search(payload, report)
     if (report.written?.errors.length || report.linkWritten?.errors.length) code = 1

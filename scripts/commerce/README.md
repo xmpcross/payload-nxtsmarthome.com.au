@@ -39,7 +39,7 @@ scripts/prices.sh search "aqara hub" --limit 5
 
 ### Scope: `--inactive` and `--all`
 
-`refresh`, `link` and `zenrows` consider **active** products by default. `--inactive`
+`refresh`, `link` and `fill` consider **active** products by default. `--inactive`
 selects only products with `active = false` (for example the Amazon AU imports), and
 `--all` selects both. `--product <slug>` picks one product whatever its scope. These
 flags only choose products: no command ever changes a product's `active` flag.
@@ -111,47 +111,41 @@ scripts/prices.sh link --inactive --write --max-cost 0.5     # link all unlinked
 scripts/prices.sh refresh --inactive --write --max-cost 0.5  # then add their other AU retailers
 ```
 
-### `zenrows [--inactive|--all] [--product slug] [--retailer name] [--verify|--fill] [--limit 10] [--write] [--max-requests 50]`
+### `fill [--inactive|--all] [--product slug] [--retailer name] [--limit N] [--write] [--max-cost 1]`
 
-Fetches retailer pages through ZenRows (AU premium proxy). Six retailers are supported:
-Amazon AU, JB Hi-Fi, Harvey Norman, The Good Guys, eBay AU and Bunnings.
+Replaces offers that link to a retailer **search-results page** (`/s?k=`, `/search`,
+`?q=`, `SearchDisplay`…) with the retailer's product page. DataForSEO only, no page
+fetching:
 
-- **`--verify`** (the default) loads each active offer's own page and reads its price.
-  A matching price is marked `VERIFIED`. A different price becomes an `UPDATE`, or a
-  `HOLD` if the change is beyond ×1.5.
-- **`--fill`** covers supported retailers that have no offer for the product. It
-  searches the retailer and proposes an `ADD` only when a result matches on **brand
-  plus model number**, or when the product page's GTIN matches the product's GTIN.
-  Every other result is listed under "Gap-fill candidates" and is never written. A
-  product whose name has no model number (no token mixing letters and digits) can
-  only be matched by GTIN. Spec-like tokens ("2nd", "4k", "128gb") do not count as a
-  model number, and listings with condition words ("faulty", "issues", "see
-  description", "open box"…) never match.
-  A retailer whose only offer is a search-results page (`/s?k=`, `/search`, `?q=`…)
-  counts as missing: a match replaces the search URL with the product URL (`UPDATE
-  … (+ direct URL)`). `--search-only` limits `--fill` to those offers, so no requests
-  are spent on retailers with no offer. Amazon results are read from its result cards
-  (brand + title, clean `/dp/<ASIN>` URL).
-- JB Hi-Fi search results load after the page renders, so its search is fetched with
-  a 6 s render wait (`searchWaitMs`) and read from the result cards only (header
-  promos also link to `/products/`).
-- **Known gaps (22 Oct 2026):** The Good Guys search comes back without results even
-  with a render wait, so `--fill` finds nothing there; Scorptec, Bing Lee, Mwave,
-  Officeworks and Kogan are not supported.
+- **Amazon AU**: a DataForSEO Amazon search (`merchant/amazon/products`, $0.0015 per
+  search). The URL becomes `https://www.amazon.com.au/dp/<ASIN>` and the offer takes
+  the listing price. Amazon titles sometimes omit the brand; it is taken from the
+  listing URL slug when the slug starts with it.
+- **Other retailers** (JB Hi-Fi, The Good Guys, Harvey Norman, Officeworks, Bunnings,
+  Bing Lee, Kogan, Scorptec, Mwave, Woolworths, BIG W, Kmart, Appliances Online, Dick
+  Smith, Domayne): a Google search `site:<retailer> <brand> <name>` (`serp/google/organic`,
+  about $0.003 per search as billed). Only URLs on the retailer's host that match its
+  product-page pattern (`productPath` in `lib/au-retailers.ts`) are considered. Google
+  results carry no price, so the offer keeps its own.
+- **eBay** is not filled: listings come and go, and an eBay search link still earns
+  through Geniuslink.
 
-Prices are extracted in this order:
-
-1. JSON-LD `Product`/`Offer` (including `AggregateOffer.lowPrice`)
-2. `product:price:amount`, `og:price:amount` or `itemprop="price"`
-3. selectors specific to each retailer
-
-A price stated in a currency other than AUD is rejected. It is never converted.
+A result is used only when `identityMatch` accepts it with the product's **distinctive**
+model tokens (as `link` does): brand plus every model number, no variant, accessory or
+condition word ("pro", "mini", "kit", "stand", "faulty", "see description"…). Spec-like
+tokens ("2nd", "4k", "128gb") are not model numbers, so a product named only by them
+("HomePod (2nd Generation)") is never matched and stays a search link. An Amazon price
+beyond ×1.5 of the offer's price is a `HOLD` (possibly another pack size) and nothing is
+changed. Rejected results are listed under "Gap-fill candidates" for manual review.
 
 ```bash
-scripts/prices.sh zenrows --product smartmi-air-purifier-c1
-scripts/prices.sh zenrows --retailer "JB Hi-Fi" --fill --limit 5
-scripts/prices.sh zenrows --verify --fill --limit 10 --max-requests 40 --write
+scripts/prices.sh fill --retailer "Amazon AU"                  # review all Amazon search links
+scripts/prices.sh fill --limit 20 --max-cost 0.2               # review 20 products, all retailers
+scripts/prices.sh fill --write --max-cost 1.5                  # apply everything (~$1.2 for 433 offers)
 ```
+
+`refresh` also replaces a search URL whenever Google Shopping returns that retailer's
+product URL for the product, not only on a price change.
 
 ### `report`
 
@@ -163,8 +157,8 @@ Metadata goes into the existing `sourceData` JSON fields. There is no schema cha
 New keys are merged into what is already there and never replace it. A `sourceData`
 value that is not an object is left alone and reported.
 
-- `offer.sourceData`: `checkedAt`, `source` (`dataforseo` or `zenrows`, meaning where
-  the current price came from), `availability`, `sellerTitle`, `verifiedAt`,
+- `offer.sourceData`: `checkedAt`, `source` (where the current price came from:
+  `dataforseo`, or `zenrows` on offers checked by the retired ZenRows tool), `availability`, `sellerTitle`, `verifiedAt`,
   `verifiedPrice`. When `--drop-stale` clears a price, it also records
   `staleClearedAt` and `clearedPriceAud`.
 - `product.sourceData.pricesCheckedAt`
@@ -186,11 +180,9 @@ All writes pass `context: { skipRevalidation: true }`. Product pages revalidate 
 - Linking every inactive product: 184 × ($0.001 search + $0.001 product_info) =
   **about $0.37** at published prices (the budget guard counts up to $0.55). `link`
   prints this for its own scope before posting.
-- `--max-requests` (default 50) caps ZenRows calls. Credits are summed from the
-  `X-Request-Cost` header. Checks that were skipped are listed in the report.
 - A lock file (`app/scratch/price-runs/prices.lock`) stops two runs from overlapping.
   If the lock was left by a process that has died, the next run takes it over.
-- If `DATAFORSEO_LOGIN`/`DATAFORSEO_PASSWORD` or `ZENROWS_API_KEY` is missing, the
+- If `DATAFORSEO_LOGIN`/`DATAFORSEO_PASSWORD` is missing, the
   tool stops before doing anything. This check is skipped in fixture mode.
 
 ## Offline fixture mode
@@ -202,7 +194,6 @@ are considered.
 
 ```bash
 scripts/prices.sh refresh --fixture app/scripts/commerce/fixtures --limit 5
-scripts/prices.sh zenrows --fixture app/scripts/commerce/fixtures --verify --fill
 scripts/prices.sh search "aqara hub" --fixture app/scripts/commerce/fixtures
 ```
 
@@ -212,8 +203,8 @@ Its layout:
 - `dataforseo/product_info/<googleProductId>.json` and
   `dataforseo/products/<keyword-slug>.json` (for `search`) and
   `dataforseo/products/<product slug>.json` (for `link`) contain `task_get/advanced` envelopes.
-- `zenrows/*.html` contains retailer pages. `manifest.json` maps them by
-  `<product|search>:<Retailer>:<product slug>`.
+- `zenrows/*.html` holds retailer pages from the retired ZenRows tool; the
+  `extract-price` tests still read them.
 
 The fixtures reference real catalogue products (by `googleProductId` and slug) so they
 produce a diff against the live database. They cover:
@@ -227,10 +218,6 @@ produce a diff against the live database. They cover:
 - a seller with no price
 - an empty result
 - a stale offer
-- prices from JSON-LD (Offer, an array, `@graph`, AggregateOffer), from meta and
-  microdata, and from the Amazon selector
-- a page with no price
-- gap-fill candidates rejected for variant or accessory words
 
 If the catalogue changes, a fixture diff may change too.
 
@@ -242,18 +229,18 @@ cd app && ./node_modules/.bin/tsx --test scripts/commerce/tests/*.test.ts
 
 `tests/link.test.ts` covers the link decision against `fixtures/dataforseo/products/fixture-link-*.json`
 (matched, ambiguous, no match), GTIN and short-model cases, query building and the
-per-SERP budget guard. `tests/prices.test.ts` covers `parseAud`/`extractPrice` (every fixture format), the retailer
+per-SERP budget guard. `tests/fill.test.ts` covers the `fill` choice (Amazon brand from
+the URL slug, product-page patterns per retailer, search/category pages and other hosts
+ignored, accessories and spec-only names never matched). `tests/prices.test.ts` covers `parseAud`/`extractPrice` (every fixture format), the retailer
 matcher, identity matching, and the plan rules (update, add, hold, stale,
 `--drop-stale`, skips, de-duplication, product price, `sourceData` merge).
 
-## Scheduling later
+## Scheduling
 
-Nothing is scheduled yet. A cron job can call the tool directly; the lock makes
-overlapping runs safe:
-
-```cron
-# 30 4 * * *  /kspellman/sites/nxtsmarthome.com.au/scripts/prices.sh refresh --limit 60 --write --max-cost 0.25 >> /var/log/nxt-prices.log 2>&1
-```
+Scheduled through cronmanager (`/opt/cronmanager`): job 42 runs
+`refresh --limit 400 --write --max-cost 0.50` daily at 04:30 UTC, logging to
+`/var/log/nxtsmarthome-prices.log`. The lock makes overlapping runs safe. ZenRows
+(job 43) was retired on 22 October 2026; the tool no longer has a `zenrows` command.
 
 The exit code is non-zero on errors, including failed writes.
 
@@ -262,12 +249,12 @@ The exit code is non-zero on errors, including failed writes.
 - `prices.ts`: the CLI
 - `lib/au-retailers.ts`: the AU retailer matcher (ported from `refresh-prices.mjs`
   and extended with the existing Merchants), the excluded sellers, the host
-  allow-lists and ZenRows search URLs
-- `lib/dataforseo.ts`: the `task_post`/`task_get` client, with polling, a timeout,
-  cost tracking and `--max-cost`. Google Shopping on DataForSEO has no live endpoint.
-- `lib/zenrows.ts`: the ZenRows client, with concurrency, retries, credits and
-  `--max-requests`
-- `lib/extract-price.ts`: price and search-result extraction from HTML (pure)
+  allow-lists and each retailer's product-page pattern (`productPath`, for `fill`)
+- `lib/dataforseo.ts`: the `task_post`/`task_get` client (Google Shopping, Amazon search,
+  Google organic), with polling, a timeout, cost tracking and `--max-cost`
+- `lib/fill.ts`: the `fill` choice of product page (pure)
+- `lib/extract-price.ts`: AUD parsing (used by the RapidAPI sync) and HTML price
+  extraction kept from the ZenRows tool (pure)
 - `lib/match.ts`: identity matching on brand plus model, or GTIN (pure)
 - `lib/link.ts`: the `link` query and matched/ambiguous/no-match decision (pure)
 - `lib/plan.ts`: the diff and plan rules (pure)

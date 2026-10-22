@@ -10,17 +10,6 @@
  * a retailer with no Merchant record is reported and skipped, never created.
  */
 
-export interface ZenRowsProfile {
-  /** Retailer search page for a free-text query. */
-  search: (query: string) => string
-  /** Path pattern of a product page on this retailer, used to pick links off a search page. */
-  productPath: RegExp
-  /** Whether the page needs a headless browser (more ZenRows credits). */
-  jsRender: boolean
-  /** Milliseconds ZenRows waits after rendering a search page (results load late). */
-  searchWaitMs?: number
-}
-
 export interface AuRetailer {
   /** Payload Merchant name. */
   name: string
@@ -28,39 +17,36 @@ export interface AuRetailer {
   patterns: string[]
   /** Hostnames (and their subdomains) a product URL for this retailer may use. */
   hosts: string[]
-  /** Present when ZenRows verification / gap filling is supported for this retailer. */
-  zenrows?: ZenRowsProfile
+  /**
+   * Path of a product page on this retailer (not a search or category page). Present when
+   * `prices.sh fill` can replace a search-page offer: Amazon through DataForSEO's Amazon
+   * search, the rest through a Google `site:` search. eBay has none: its listings come and
+   * go, and an eBay search link still earns through Geniuslink.
+   */
+  productPath?: RegExp
 }
 
-const q = (s: string) => encodeURIComponent(s)
-
 export const AU_RETAILERS: AuRetailer[] = [
-  { name: 'JB Hi-Fi', patterns: ['jb hi-fi', 'jbhifi', 'jb hifi'], hosts: ['jbhifi.com.au'],
-    zenrows: { search: (s) => `https://www.jbhifi.com.au/search?query=${q(s)}`, productPath: /\/products\/[a-z0-9-]+/i, jsRender: true, searchWaitMs: 6000 } },
-  { name: 'The Good Guys', patterns: ['good guys'], hosts: ['thegoodguys.com.au'],
-    zenrows: { search: (s) => `https://www.thegoodguys.com.au/SearchDisplay?searchTerm=${q(s)}`, productPath: /^\/[a-z0-9-]+-[a-z0-9]+$/i, jsRender: true } },
-  { name: 'Harvey Norman', patterns: ['harvey norman'], hosts: ['harveynorman.com.au'],
-    zenrows: { search: (s) => `https://www.harveynorman.com.au/catalogsearch/result/?q=${q(s)}`, productPath: /\/[a-z0-9-]+\.html$/i, jsRender: true } },
-  { name: 'Officeworks', patterns: ['officeworks'], hosts: ['officeworks.com.au'] },
-  { name: 'Bunnings', patterns: ['bunnings'], hosts: ['bunnings.com.au'],
-    zenrows: { search: (s) => `https://www.bunnings.com.au/search/products?q=${q(s)}`, productPath: /_p\d+/i, jsRender: true } },
-  { name: 'Bing Lee', patterns: ['bing lee', 'binglee'], hosts: ['binglee.com.au'] },
-  { name: 'Kogan AU', patterns: ['kogan'], hosts: ['kogan.com'] },
-  { name: 'Scorptec', patterns: ['scorptec'], hosts: ['scorptec.com.au'] },
-  { name: 'Mwave', patterns: ['mwave'], hosts: ['mwave.com.au'] },
-  { name: 'Woolworths', patterns: ['woolworths'], hosts: ['woolworths.com.au'] },
-  { name: 'BIG W', patterns: ['big w'], hosts: ['bigw.com.au'] },
-  { name: 'Kmart', patterns: ['kmart'], hosts: ['kmart.com.au'] },
+  { name: 'JB Hi-Fi', patterns: ['jb hi-fi', 'jbhifi', 'jb hifi'], hosts: ['jbhifi.com.au'], productPath: /^\/products\/[a-z0-9-]+\/?$/i },
+  { name: 'The Good Guys', patterns: ['good guys'], hosts: ['thegoodguys.com.au'], productPath: /^\/[a-z0-9-]+-[a-z0-9]*\d[a-z0-9]*\/?$/i },
+  { name: 'Harvey Norman', patterns: ['harvey norman'], hosts: ['harveynorman.com.au'], productPath: /^\/[a-z0-9-]+\.html$/i },
+  { name: 'Officeworks', patterns: ['officeworks'], hosts: ['officeworks.com.au'], productPath: /^\/shop\/officeworks\/p\/[a-z0-9-]+/i },
+  { name: 'Bunnings', patterns: ['bunnings'], hosts: ['bunnings.com.au'], productPath: /^\/[a-z0-9-]+_p\d+\/?$/i },
+  { name: 'Bing Lee', patterns: ['bing lee', 'binglee'], hosts: ['binglee.com.au'], productPath: /^\/products\/[a-z0-9-]+\/?$/i },
+  { name: 'Kogan AU', patterns: ['kogan'], hosts: ['kogan.com'], productPath: /^\/au\/buy\/[a-z0-9-]+\/?$/i },
+  { name: 'Scorptec', patterns: ['scorptec'], hosts: ['scorptec.com.au'], productPath: /^\/product\/[a-z0-9-]+\/[a-z0-9-]+\/\d+-[a-z0-9-]+\/?$/i },
+  { name: 'Mwave', patterns: ['mwave'], hosts: ['mwave.com.au'], productPath: /^\/products\/[a-z0-9-]+\/?$/i },
+  { name: 'Woolworths', patterns: ['woolworths'], hosts: ['woolworths.com.au'], productPath: /^\/shop\/productdetails\/\d+/i },
+  { name: 'BIG W', patterns: ['big w'], hosts: ['bigw.com.au'], productPath: /^\/product\/[a-z0-9-]+\/p\/\d+\/?$/i },
+  { name: 'Kmart', patterns: ['kmart'], hosts: ['kmart.com.au'], productPath: /^\/product\/[a-z0-9.-]+-\d+\/?$/i },
   { name: 'Costco AU', patterns: ['costco'], hosts: ['costco.com.au'] },
-  { name: 'Appliances Online', patterns: ['appliances online', 'appliancesonline'], hosts: ['appliancesonline.com.au'] },
-  { name: 'Amazon AU', patterns: ['amazon'], hosts: ['amazon.com.au'],
-    zenrows: { search: (s) => `https://www.amazon.com.au/s?k=${q(s)}`, productPath: /\/dp\/[A-Z0-9]{10}/, jsRender: false } },
-  { name: 'eBay AU', patterns: ['ebay'], hosts: ['ebay.com.au'],
-    zenrows: { search: (s) => `https://www.ebay.com.au/sch/i.html?_nkw=${q(s)}`, productPath: /\/itm\/\d+/, jsRender: false } },
+  { name: 'Appliances Online', patterns: ['appliances online', 'appliancesonline'], hosts: ['appliancesonline.com.au'], productPath: /^\/product\/[a-z0-9-]+\/?$/i },
+  { name: 'Amazon AU', patterns: ['amazon'], hosts: ['amazon.com.au'], productPath: /\/dp\/[A-Z0-9]{10}/ },
+  { name: 'eBay AU', patterns: ['ebay'], hosts: ['ebay.com.au'] },
   // Merchants that already exist in Payload (added by earlier imports).
-  { name: 'Dick Smith', patterns: ['dick smith'], hosts: ['dicksmith.com.au'] },
+  { name: 'Dick Smith', patterns: ['dick smith'], hosts: ['dicksmith.com.au'], productPath: /^\/da\/buy\/[a-z0-9-]+\/?$/i },
   { name: 'Videopro', patterns: ['videopro'], hosts: ['videopro.com.au'] },
-  { name: 'Domayne', patterns: ['domayne'], hosts: ['domayne.com.au'] },
+  { name: 'Domayne', patterns: ['domayne'], hosts: ['domayne.com.au'], productPath: /^\/[a-z0-9-]+\.html$/i },
   { name: 'Mobileciti', patterns: ['mobileciti'], hosts: ['mobileciti.com.au'] },
   { name: 'Jaycar', patterns: ['jaycar'], hosts: ['jaycar.com.au'] },
   { name: 'Beacon Lighting', patterns: ['beacon lighting'], hosts: ['beaconlighting.com.au'] },
@@ -80,7 +66,8 @@ export const EXCLUDED_SELLERS = ['desertcart', 'u-buy', 'ubuy', 'big apple buddy
   'mcgrocer', 'crowdshop', 'good buyz', 'etsy', 'cex', 'cash converters', 'shopee', 'walmart', 'aliexpress']
 
 /** Retailers ZenRows can verify / gap-fill. */
-export const ZENROWS_RETAILERS = AU_RETAILERS.filter((r) => r.zenrows)
+/** Retailers whose search-page offers `prices.sh fill` can replace. */
+export const FILL_RETAILERS = AU_RETAILERS.filter((r) => r.productPath)
 
 export type SellerMatch =
   | { status: 'matched'; retailer: AuRetailer }

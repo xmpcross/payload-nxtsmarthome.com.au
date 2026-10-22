@@ -1,8 +1,9 @@
 /**
- * DataForSEO Merchant (Google Shopping) client for the price tools.
+ * DataForSEO client for the price tools: Google Shopping (products, product_info), Amazon AU
+ * search (amazon_products) and Google organic results (organic, for `site:` searches).
  *
- * Google Shopping on DataForSEO is queue-only (task_post → task_get); there is no live
- * endpoint for merchant/google/products or product_info, so both use the task flow with
+ * All four use the queue (task_post → task_get); Google Shopping has no live endpoint, and
+ * the others use the cheaper Standard queue the same way, so all use the task flow with
  * polling. task_post is where DataForSEO charges: the response carries `cost` per task and
  * in total, which is summed here. `maxCost` is checked BEFORE each post using an estimate
  * per task (refined from the real cost once one batch has been posted), so a run stops
@@ -12,6 +13,7 @@
  * simulates task_post cost with the estimate, so the guard can be exercised offline:
  *   <fixtureDir>/dataforseo/product_info/<googleProductId>.json
  *   <fixtureDir>/dataforseo/products/<slug of keyword>.json
+ *   <fixtureDir>/dataforseo/amazon_products/<tag>.json, <fixtureDir>/dataforseo/organic/<tag>.json
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -24,15 +26,24 @@ export const LANGUAGE_CODE = 'en'
  * checked 2026-10-17): Products $0.001 per SERP of up to 40 results (depth 41-80 = 2 SERPs,
  * max depth 120 = 3 SERPs); Product Info $0.001 per product. Priority queue doubles both.
  */
-export const PUBLISHED_COST: Record<Endpoint, number> = { product_info: 0.001, products: 0.001 }
+export const PUBLISHED_COST: Record<Endpoint, number> = { product_info: 0.001, products: 0.001, amazon_products: 0.0015, organic: 0.003 }
 /** Budget-guard estimate per unit (USD): the published price plus a 50% margin; replaced by the observed average once known. */
-export const ESTIMATED_COST: Record<Endpoint, number> = { product_info: 0.0015, products: 0.0015 }
+export const ESTIMATED_COST: Record<Endpoint, number> = { product_info: 0.0015, products: 0.0015, amazon_products: 0.00225, organic: 0.0045 }
 /** A Google Shopping SERP holds up to 40 results; products is billed per SERP. */
 export const SERP_SIZE = 40
 export const serpsFor = (depth: number) => Math.max(1, Math.ceil(depth / SERP_SIZE))
 const BATCH = 100
 
-type Endpoint = 'product_info' | 'products'
+type Endpoint = 'product_info' | 'products' | 'amazon_products' | 'organic'
+/** API path and the request fields each endpoint needs on top of the job body. */
+const ENDPOINTS: Record<Endpoint, { path: string; extra: Record<string, unknown> }> = {
+  product_info: { path: 'merchant/google/product_info', extra: { language_code: 'en' } },
+  products: { path: 'merchant/google/products', extra: { language_code: 'en' } },
+  // Amazon prices: Standard queue $0.0015 per task (scripts/commerce/amazon-import.ts, checked 2026-10-17).
+  amazon_products: { path: 'merchant/amazon/products', extra: { language_code: 'en_AU', se_domain: 'amazon.com.au' } },
+  // Google organic: $0.003 per task as billed on this account (observed 22 Oct 2026; the guard adds 50%).
+  organic: { path: 'serp/google/organic', extra: { language_code: 'en' } },
+}
 
 export interface DfsPrice { current?: number | null; regular?: number | null; currency?: string | null; displayed_price?: string | null }
 export interface DfsSeller { type?: string; title?: string | null; url?: string | null; price?: DfsPrice | null; product_availability?: string | null }
@@ -47,6 +58,8 @@ export interface DfsShoppingItem {
   currency?: string | null; product_id?: string | null; data_docid?: string | null; seller?: string | null; url?: string | null
   shopping_url?: string | null; product_rating?: { value?: number | null } | null; reviews_count?: number | null
 }
+export interface DfsAmazonItem { type?: string; title?: string | null; url?: string | null; data_asin?: string | null; price_from?: number | null; currency?: string | null }
+export interface DfsOrganicItem { type?: string; title?: string | null; url?: string | null; domain?: string | null; description?: string | null }
 interface DfsTask<T> { id?: string; status_code?: number; status_message?: string; cost?: number; data?: { tag?: string }; result?: Array<{ items?: T[] | null }> | null }
 interface DfsEnvelope<T> { status_code?: number; status_message?: string; cost?: number; tasks?: DfsTask<T>[] }
 
@@ -123,6 +136,23 @@ export class DataForSeoClient {
     return out
   }
 
+  /** Amazon AU searches, one task each (depth up to 100 results, one billing unit). */
+  async amazonMany(jobs: Array<{ tag: string; keyword: string }>, depth = 20): Promise<Map<string, TaskOutcome<DfsAmazonItem[]>>> {
+    return this.many<DfsAmazonItem>('amazon_products', jobs.map((j) => ({ tag: j.tag, body: { keyword: j.keyword, depth } })))
+  }
+
+  /** Google organic searches (e.g. `site:jbhifi.com.au Aqara Hub M3`), one 10-result SERP each. */
+  async organicMany(jobs: Array<{ tag: string; keyword: string }>): Promise<Map<string, TaskOutcome<DfsOrganicItem[]>>> {
+    return this.many<DfsOrganicItem>('organic', jobs.map((j) => ({ tag: j.tag, body: { keyword: j.keyword, depth: 10 } })))
+  }
+
+  private async many<T>(endpoint: Endpoint, jobs: Array<{ tag: string; body: Record<string, unknown> }>): Promise<Map<string, TaskOutcome<T[]>>> {
+    const items = await this.run<T>(endpoint, jobs)
+    const out = new Map<string, TaskOutcome<T[]>>()
+    for (const [tag, r] of items) out.set(tag, { result: r.result ?? (r.error ? null : []), error: r.error })
+    return out
+  }
+
   private async run<T>(endpoint: Endpoint, jobs: Array<{ tag: string; body: Record<string, unknown> }>, units = 1): Promise<Map<string, { result: T[] | null; error?: string }>> {
     const out = new Map<string, { result: T[] | null; error?: string }>()
     const taskIds = new Map<string, string>()
@@ -142,8 +172,8 @@ export class DataForSeoClient {
         if (fit < Math.min(BATCH, jobs.length - i)) break
         continue
       }
-      const body = batch.map((j) => ({ ...j.body, location_code: AU_LOCATION_CODE, language_code: LANGUAGE_CODE, tag: j.tag }))
-      const res = await fetch(`${BASE}merchant/google/${endpoint}/task_post`, { method: 'POST', headers: this.headers, body: JSON.stringify(body) })
+      const body = batch.map((j) => ({ ...j.body, location_code: AU_LOCATION_CODE, ...ENDPOINTS[endpoint].extra, tag: j.tag }))
+      const res = await fetch(`${BASE}${ENDPOINTS[endpoint].path}/task_post`, { method: 'POST', headers: this.headers, body: JSON.stringify(body) })
       if (!res.ok) throw new Error(`DataForSEO ${endpoint} task_post HTTP ${res.status}`)
       const env = await res.json() as DfsEnvelope<T>
       if (env.status_code !== 20000) throw new Error(`DataForSEO ${endpoint} task_post: ${env.status_code} ${env.status_message}`)
@@ -172,7 +202,7 @@ export class DataForSeoClient {
     while (pending.size && Date.now() < deadline) {
       for (const tag of [...pending]) {
         try {
-          const r = await fetch(`${BASE}merchant/google/${endpoint}/task_get/advanced/${taskIds.get(tag)}`, { headers: this.headers })
+          const r = await fetch(`${BASE}${ENDPOINTS[endpoint].path}/task_get/advanced/${taskIds.get(tag)}`, { headers: this.headers })
           const t = (await r.json() as DfsEnvelope<T>).tasks?.[0]
           if (t?.status_code === 20000) { out.set(tag, { result: t.result?.[0]?.items ?? [] }); pending.delete(tag) }
           else if (t?.status_code !== 40602 && t?.status_code !== 40601) { out.set(tag, { result: null, error: `task_get ${t?.status_code} ${t?.status_message}` }); pending.delete(tag) }
